@@ -15,19 +15,27 @@ class AnswerGenerationService
     private const NO_INFO_MARKER = '__NO_RELEVANT_INFO__';
 
     public function __construct(
-        private readonly EmbeddingService $embeddingService,
-        private readonly VectorSearchService $vectorSearchService,
+        private readonly EmbeddingService         $embeddingService,
+        private readonly VectorSearchService      $vectorSearchService,
         private readonly LanguageDetectionService $languageDetectionService,
-    ) {}
+        private readonly QueryRewriter            $queryRewriter,
+    )
+    {
+    }
 
     /**
-     * @param  array<int, array{role: string, content: string}>  $history
+     * @param array<int, array{role: string, content: string}> $history
      * @return array{answer: string, language: string, sources: Collection<int, DocumentChunk>, match_score: ?int, input_tokens: ?int, output_tokens: ?int}
      */
     public function answer(string $question, array $history = []): array
     {
         $detectedLanguage = $this->languageDetectionService->detect($question);
-        $questionEmbedding = $this->embeddingService->embed($question);
+
+        // Переформульовуємо питання для пошуку на основі історії розмови
+        // (наприклад, "а другий?" → "яка гарантія на виріб Y?"); для першого
+        // питання сесії (без історії) повертається без змін.
+        $retrievalQuestion = $this->queryRewriter->rewriteForRetrieval($question, $history);
+        $questionEmbedding = $this->embeddingService->embed($retrievalQuestion);
         $chunks = $this->vectorSearchService->search($questionEmbedding);
 
         // FR-009: коротка відповідь без виклику LLM — але лише якщо взагалі
@@ -48,10 +56,10 @@ class AnswerGenerationService
         $matchScore = $chunks->isEmpty() ? null : $this->matchScore($chunks);
 
         $messages = $this->buildMessages($question, $chunks, $detectedLanguage, $history);
-
+dd($messages, $chunks);
         [$response, $succeeded] = $this->requestWithSingleRetry($messages);
 
-        if (! $succeeded) {
+        if (!$succeeded) {
             throw new RagAnswerGenerationException('Зовнішній сервіс мовної моделі недоступний після повторної спроби.');
         }
 
@@ -72,33 +80,45 @@ class AnswerGenerationService
      * Відсоток релевантності найкращого (найближчого) фрагмента серед
      * знайдених: косинусна відстань 0 → 100%, відстань 1+ → 0%.
      *
-     * @param  Collection<int, DocumentChunk>  $chunks
+     * @param Collection<int, DocumentChunk> $chunks
      */
     private function matchScore(Collection $chunks): int
     {
-        $bestDistance = $chunks->min('neighbor_distance');
+        return $this->percentageFor($chunks->min('neighbor_distance'));
+    }
 
-        return (int) round(max(0, 1 - $bestDistance) * 100);
+    private function percentageFor(float $distance): int
+    {
+        return (int)round(max(0, 1 - $distance) * 100);
     }
 
     /**
-     * @param  Collection<int, DocumentChunk>  $chunks
-     * @param  array<int, array{role: string, content: string}>  $history
+     * @param Collection<int, DocumentChunk> $chunks
+     * @param array<int, array{role: string, content: string}> $history
      * @return array<int, array{role: string, content: string}>
      */
     private function buildMessages(string $question, Collection $chunks, string $language, array $history): array
     {
+        // Кожен фрагмент супроводжується відсотком релевантності — LLM сама
+        // вирішує, якому фрагменту довіряти більше, якщо вони різняться чи
+        // суперечать один одному, замість сліпо покладатися на порядок.
         $context = $chunks->isEmpty()
             ? 'Контекст відсутній.'
-            : $chunks->map(fn (DocumentChunk $c, int $i) => '['.($i + 1).'] '.$c->content)->implode("\n\n");
+            : $chunks->map(function (DocumentChunk $c, int $i) {
+                $percentage = $this->percentageFor($c->neighbor_distance);
 
-        $system = "Ти — доброзичливий, живий співрозмовник, що допомагає людям розібратися з питаннями на основі наданого контексту з бази знань.\n".
-            'Спілкуйся природно й невимушено, як реальна людина в чаті: короткими реченнями, без канцеляриту, без зайвих вступних фраз на кшталт "Згідно з наданим контекстом" чи "На основі документа". '.
-            "Можеш звертатися до співрозмовника напряму, підтримувати тон розмови, ставити уточнювальне запитання, якщо це доречно.\n".
-            "Факти про базу знань бери ЛИШЕ з контексту нижче — нічого не вигадуй і не додавай зі своїх загальних знань.\n".
-            "Якщо питання стосується самої розмови (наприклад, \"про що ми говорили\", \"що я питав раніше\", \"повтори попередню відповідь\") — вільно відповідай на основі попередніх повідомлень цього діалогу, це не вважається вигадуванням.\n".
-            "Відповідай мовою з кодом \"{$language}\".\n".
-            'Якщо питання стосується бази знань, але контекст справді не містить відповіді, поверни рядок '.self::NO_INFO_MARKER.' і нічого більше.'."\n\n".
+                return '[' . ($i + 1) . "] (релевантність: {$percentage}%) {$c->content}";
+            })->implode("\n\n");
+
+        $system = "Ти — доброзичливий, живий співрозмовник, що допомагає людям розібратися з питаннями на основі наданого контексту з бази знань.\n" .
+            'Спілкуйся природно й невимушено, як реальна людина в чаті: короткими реченнями, без канцеляриту, без зайвих вступних фраз на кшталт "Згідно з наданим контекстом" чи "На основі документа". ' .
+            "Можеш звертатися до співрозмовника напряму, підтримувати тон розмови, ставити уточнювальне запитання, якщо це доречно.\n" .
+            "Факти про базу знань бери ЛИШЕ з контексту нижче — нічого не вигадуй і не додавай зі своїх загальних знань.\n" .
+            "Кожен фрагмент контексту має позначку релевантності у відсотках (100% — точний збіг, 0% — майже не пов'язаний). " .
+            "Довіряй передусім фрагментам із вищим відсотком; якщо фрагменти суперечать один одному або лише один справді відповідає на питання — обирай найрелевантніший, а не просто перший.\n" .
+            "Якщо питання стосується самої розмови (наприклад, \"про що ми говорили\", \"що я питав раніше\", \"повтори попередню відповідь\") — вільно відповідай на основі попередніх повідомлень цього діалогу, це не вважається вигадуванням.\n" .
+            "Відповідай мовою з кодом \"{$language}\".\n" .
+            'Якщо питання стосується бази знань, але жоден фрагмент справді не містить відповіді, поверни рядок ' . self::NO_INFO_MARKER . ' і нічого більше.' . "\n\n" .
             "Контекст із бази знань:\n{$context}";
 
         return [
@@ -111,7 +131,7 @@ class AnswerGenerationService
     /**
      * FR-009c: рівно одна автоматична повторна спроба при збої LLM.
      *
-     * @param  array<int, array{role: string, content: string}>  $messages
+     * @param array<int, array{role: string, content: string}> $messages
      * @return array{0: ?CreateResponse, 1: bool}
      */
     private function requestWithSingleRetry(array $messages): array

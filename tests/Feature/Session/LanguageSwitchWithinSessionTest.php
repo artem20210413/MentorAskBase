@@ -29,6 +29,8 @@ class LanguageSwitchWithinSessionTest extends TestCase
         OpenAI::fake([
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Гарантія 24 місяці.']]]]),
+            // Друге питання: спершу переформулювання запиту на основі історії (QueryRewriter)
+            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'What is the warranty for product X?']]]]),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'The warranty is 24 months.']]]]),
         ]);

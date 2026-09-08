@@ -45,8 +45,10 @@
 | `embedding` | `vector(N)` (pgvector) | N визначається обраною моделлю ембедингів (research.md #1) |
 | `created_at` | timestamp | |
 
-Індекс: HNSW/IVFFlat на `embedding` для similarity search; звичайний індекс
-на `document_id`.
+Індекс: звичайний індекс на `document_id`. Індекс HNSW/IVFFlat на `embedding`
+можливий лише якщо N ≤ 2000 (жорсткий ліміт pgvector) — з поточною моделлю
+`text-embedding-3-large` (N=3072) індекс НЕ використовується, пошук виконує
+повний перебір (brute-force); прийнятно для масштабу SC-008 (~1000 документів).
 
 ## ConversationSession
 

@@ -51,9 +51,10 @@ class QuestionAnsweringService
     }
 
     /**
-     * Джерела відповіді з назвою документа й прямим посиланням (FR-009d).
+     * Джерела відповіді з назвою документа, прямим посиланням і відсотком
+     * релевантності фрагмента, з якого взято інформацію (FR-009d).
      *
-     * @return array<int, array{document_id: string, document_name: string, page_number: ?int, url: string}>
+     * @return array<int, array{document_id: string, document_name: string, page_number: ?int, relevance: int, url: string}>
      */
     public function sources(QueryLog $log): array
     {
@@ -78,6 +79,8 @@ class QuestionAnsweringService
                     'document_id' => $document->id,
                     'document_name' => $document->original_name,
                     'page_number' => $ref['page_number'],
+                    // ?? null — старі записи журналу (до додавання цього поля) його не мають
+                    'relevance' => $ref['relevance'] ?? null,
                     // Фрагмент #page=N відкриває конкретну сторінку у
                     // більшості вбудованих PDF-переглядачів браузера.
                     'url' => $ref['page_number'] ? "{$url}#page={$ref['page_number']}" : $url,
@@ -89,16 +92,22 @@ class QuestionAnsweringService
     }
 
     /**
-     * Унікальні пари (документ, сторінка), використані для відповіді —
-     * найрелевантніші (найближчі) фрагменти йдуть першими.
+     * Унікальні пари (документ, сторінка), використані для відповіді, з
+     * відсотком релевантності — найрелевантніші (найближчі) фрагменти йдуть
+     * першими. Якщо на одну сторінку припадає кілька фрагментів, лишається
+     * той, що дав найвищу релевантність.
      *
      * @param  Collection<int, DocumentChunk>  $chunks
-     * @return array<int, array{document_id: string, page_number: ?int}>
+     * @return array<int, array{document_id: string, page_number: ?int, relevance: int}>
      */
     private function sourceReferences(Collection $chunks): array
     {
         return $chunks
-            ->map(fn (DocumentChunk $chunk) => ['document_id' => $chunk->document_id, 'page_number' => $chunk->page_number])
+            ->map(fn (DocumentChunk $chunk) => [
+                'document_id' => $chunk->document_id,
+                'page_number' => $chunk->page_number,
+                'relevance' => (int) round(max(0, 1 - $chunk->neighbor_distance) * 100),
+            ])
             ->unique(fn (array $ref) => $ref['document_id'].':'.$ref['page_number'])
             ->values()
             ->all();

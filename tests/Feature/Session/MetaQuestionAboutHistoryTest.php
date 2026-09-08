@@ -33,7 +33,9 @@ class MetaQuestionAboutHistoryTest extends TestCase
             // Перше питання: релевантний чанк знайдено
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.9)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Гарантія 24 місяці.']]]]),
-            // Друге (мета-)питання: ембединг зовсім не схожий на чанк → пошук нічого не знайде
+            // Друге (мета-)питання: спершу переформулювання запиту (QueryRewriter),
+            // потім ембединг зовсім не схожий на чанк → пошук нічого не знайде
+            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Про що ми щойно говорили?']]]]),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, -0.9)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Ми говорили про гарантію на виріб.']]]]),
         ]);
@@ -51,6 +53,6 @@ class MetaQuestionAboutHistoryTest extends TestCase
         $second->assertJsonPath('answer', 'Ми говорили про гарантію на виріб.');
         $second->assertJsonPath('sources', []);
 
-        OpenAI::assertSent(Chat::class, 2);
+        OpenAI::assertSent(Chat::class, 3);
     }
 }

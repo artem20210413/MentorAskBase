@@ -22,10 +22,15 @@ return new class extends Migration
             $table->index('document_id');
         });
 
-        // HNSW-індекс для пошуку найближчих сусідів (cosine distance — узгоджено з VectorSearchService)
-        DB::statement(
-            'CREATE INDEX document_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops)'
-        );
+        // HNSW-індекс для пошуку найближчих сусідів (cosine distance — узгоджено
+        // з VectorSearchService). pgvector дозволяє HNSW лише до 2000 вимірів —
+        // якщо обрана модель ембедингів більша (наприклад, text-embedding-3-large
+        // з повними 3072), індекс пропускається, пошук іде повним перебором.
+        if ((int) config('rag.openai.embedding_dimensions', 1536) <= 2000) {
+            DB::statement(
+                'CREATE INDEX document_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops)'
+            );
+        }
     }
 
     public function down(): void

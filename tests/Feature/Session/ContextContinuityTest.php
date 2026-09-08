@@ -25,6 +25,8 @@ class ContextContinuityTest extends TestCase
         OpenAI::fake([
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Гарантія 24 місяці.']]]]),
+            // Друге питання: спершу переформулювання запиту на основі історії (QueryRewriter)
+            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Яка гарантія на виріб Y?']]]]),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'А для виробу Y — 12 місяців.']]]]),
         ]);
