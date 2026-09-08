@@ -27,11 +27,11 @@ class QueryRewriter
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'Ти допомагаєш сформувати чіткий пошуковий запит. Останнє повідомлення користувача '.
-                    'нижче може спиратися на контекст попередньої розмови (займенники, скорочені посилання типу '.
-                    '"а другий?"). Доповни його до самодостатнього питання, зрозумілого без історії, використавши '.
-                    'конкретні терміни з попередніх повідомлень. Якщо питання вже самодостатнє — поверни його без '.
-                    'змін. Виведи ЛИШЕ підсумкове питання, без пояснень і лапок.',
+                'content' => 'You help build a clear search query. The user\'s latest message below may rely on '.
+                    'context from the earlier conversation (pronouns, shorthand references like "and the second '.
+                    'one?"). Rewrite it into a self-contained question that makes sense without the history, using '.
+                    'concrete terms from the earlier messages. If the question is already self-contained, return it '.
+                    'unchanged. Output ONLY the final question, no explanations or quotes.',
             ],
             ...$history,
             ['role' => 'user', 'content' => $question],

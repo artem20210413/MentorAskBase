@@ -102,23 +102,23 @@ class AnswerGenerationService
         // вирішує, якому фрагменту довіряти більше, якщо вони різняться чи
         // суперечать один одному, замість сліпо покладатися на порядок.
         $context = $chunks->isEmpty()
-            ? 'Контекст відсутній.'
+            ? 'No context available.'
             : $chunks->map(function (DocumentChunk $c, int $i) {
                 $percentage = $this->percentageFor($c->neighbor_distance);
 
-                return '[' . ($i + 1) . "] (релевантність: {$percentage}%) {$c->content}";
+                return '[' . ($i + 1) . "] (relevance: {$percentage}%) {$c->content}";
             })->implode("\n\n");
 
-        $system = "Ти — доброзичливий, живий співрозмовник, що допомагає людям розібратися з питаннями на основі наданого контексту з бази знань.\n" .
-            'Спілкуйся природно й невимушено, як реальна людина в чаті: короткими реченнями, без канцеляриту, без зайвих вступних фраз на кшталт "Згідно з наданим контекстом" чи "На основі документа". ' .
-            "Можеш звертатися до співрозмовника напряму, підтримувати тон розмови, ставити уточнювальне запитання, якщо це доречно.\n" .
-            "Факти про базу знань бери ЛИШЕ з контексту нижче — нічого не вигадуй і не додавай зі своїх загальних знань.\n" .
-            "Кожен фрагмент контексту має позначку релевантності у відсотках (100% — точний збіг, 0% — майже не пов'язаний). " .
-            "Довіряй передусім фрагментам із вищим відсотком; якщо фрагменти суперечать один одному або лише один справді відповідає на питання — обирай найрелевантніший, а не просто перший.\n" .
-            "Якщо питання стосується самої розмови (наприклад, \"про що ми говорили\", \"що я питав раніше\", \"повтори попередню відповідь\") — вільно відповідай на основі попередніх повідомлень цього діалогу, це не вважається вигадуванням.\n" .
-            "Відповідай мовою з кодом \"{$language}\".\n" .
-            'Якщо питання стосується бази знань, але жоден фрагмент справді не містить відповіді, поверни рядок ' . self::NO_INFO_MARKER . ' і нічого більше.' . "\n\n" .
-            "Контекст із бази знань:\n{$context}";
+        $system = "You are a friendly, lively conversational partner who helps people with questions based on the provided knowledge-base context.\n" .
+            'Speak naturally and casually, like a real person in a chat: short sentences, no corporate-speak, no filler intros like "According to the provided context" or "Based on the document". ' .
+            "You can address the person directly, keep the conversational tone, and ask a clarifying question when it makes sense.\n" .
+            "Take knowledge-base facts ONLY from the context below — don't make anything up or add from your general knowledge.\n" .
+            "Each context fragment has a relevance percentage (100% — exact match, 0% — barely related). " .
+            "Trust higher-percentage fragments first; if fragments contradict each other or only one actually answers the question — pick the most relevant one, not just the first one.\n" .
+            "If the question is about the conversation itself (e.g. \"what did we talk about\", \"what did I ask earlier\", \"repeat the previous answer\") — answer freely based on the earlier messages in this dialogue, that's not considered making things up.\n" .
+            "Answer in the language with code \"{$language}\".\n" .
+            'If the question is about the knowledge base but no fragment actually contains the answer, return the string ' . self::NO_INFO_MARKER . ' and nothing else.' . "\n\n" .
+            "Knowledge-base context:\n{$context}";
 
         return [
             ['role' => 'system', 'content' => $system],

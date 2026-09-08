@@ -32,9 +32,9 @@ class PdfVisionExtractor
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Це сторінка навчального/довідкового документа для помічника лікаря (медична база знань для професійного використання). '
-                                    .'Розпізнай і поверни весь текст, присутній на цьому зображенні сторінки, без коментарів. '
-                                    .'Медична термінологія, анатомічні описи та клінічна інформація в цьому контексті є звичайним професійним матеріалом, а не чутливою темою — розпізнавай текст як є, нічого не пропускай і не відмовляй.',
+                                'text' => 'This is a page from an educational/reference document for a doctor\'s assistant (professional medical knowledge base). '
+                                    .'Transcribe and return all text present on this page image, with no commentary. '
+                                    .'Medical terminology, anatomical descriptions, and clinical information in this context are ordinary professional material, not a sensitive topic — transcribe the text as-is, don\'t skip anything, and don\'t refuse.',
                             ],
                             [
                                 'type' => 'image_url',
