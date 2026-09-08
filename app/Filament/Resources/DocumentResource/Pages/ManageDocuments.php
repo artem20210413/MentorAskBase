@@ -19,20 +19,23 @@ class ManageDocuments extends ManageRecords
             // FR-016: форма завантаження використовує ту саму логіку
             // обробки, що й API-завантаження (DocumentUploadService).
             Actions\Action::make('upload')
-                ->label('Завантажити документ')
+                ->label('Завантажити документи')
                 ->form([
-                    FileUpload::make('file')
-                        ->label('PDF-файл')
+                    FileUpload::make('files')
+                        ->label('PDF-файли')
                         ->required()
+                        ->multiple()
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(config('rag.max_upload_size_mb') * 1024)
                         ->storeFiles(false),
                 ])
                 ->action(function (array $data): void {
-                    /** @var UploadedFile $file */
-                    $file = $data['file'];
+                    /** @var array<int, UploadedFile> $files */
+                    $files = $data['files'];
 
-                    app(DocumentUploadService::class)->upload($file);
+                    foreach ($files as $file) {
+                        app(DocumentUploadService::class)->upload($file);
+                    }
                 }),
         ];
     }

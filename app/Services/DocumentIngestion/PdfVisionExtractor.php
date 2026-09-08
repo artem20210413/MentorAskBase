@@ -32,7 +32,9 @@ class PdfVisionExtractor
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Transcribe all text on this document page image, exactly as written, with no commentary.',
+                                'text' => 'Transcribe all text on this document page image, exactly as written. '
+                                    .'Then, if the page contains meaningful images, diagrams, charts, or tables (not just decorative elements), '
+                                    .'add a short section "[Image description]" describing what they show. No other commentary.',
                             ],
                             [
                                 'type' => 'image_url',
