@@ -49,10 +49,16 @@ class PublicChat extends Component
 
         $this->sessionId = $log->conversation_session_id;
 
+        $sources = collect($questionAnsweringService->sources($log))
+            ->unique('document_name')
+            ->map(fn (array $source) => ['name' => $source['document_name'], 'url' => $source['url']])
+            ->values()
+            ->all();
+
         $this->messages[] = [
             'role' => 'assistant',
             'content' => $log->answer,
-            'sources' => collect($questionAnsweringService->sources($log))->pluck('document_name')->unique()->values()->all(),
+            'sources' => $sources,
         ];
 
         $this->isSending = false;

@@ -12,8 +12,16 @@
                     <p class="whitespace-pre-line">{{ $message['content'] }}</p>
 
                     @if (! empty($message['sources']))
-                        <div class="mt-2 border-t border-white/10 pt-2 text-xs opacity-60">
-                            Джерела: {{ implode(', ', $message['sources']) }}
+                        <div class="mt-2 flex flex-wrap gap-x-1 border-t border-white/10 pt-2 text-xs opacity-75">
+                            <span>Джерела:</span>
+                            @foreach ($message['sources'] as $index => $source)
+                                <a
+                                    href="{{ $source['url'] }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="text-indigo-300 underline hover:text-indigo-200"
+                                >{{ $source['name'] }}</a>{{ ! $loop->last ? ',' : '' }}
+                            @endforeach
                         </div>
                     @endif
                 </div>

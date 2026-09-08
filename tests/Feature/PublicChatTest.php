@@ -32,12 +32,17 @@ class PublicChatTest extends TestCase
             CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Ось відповідь.']]]]),
         ]);
 
-        Livewire::test(PublicChat::class)
+        $component = Livewire::test(PublicChat::class)
             ->set('question', 'Питання про документ?')
             ->call('ask')
             ->assertSet('question', '')
             ->assertSee('Ось відповідь.')
             ->assertSee('manual.pdf');
+
+        // Джерело має бути клікабельним посиланням, а не просто текстом
+        $component->assertSeeHtml('href="');
+        $this->assertSame('manual.pdf', $component->get('messages')[1]['sources'][0]['name']);
+        $this->assertNotEmpty($component->get('messages')[1]['sources'][0]['url']);
 
         $this->assertDatabaseCount('query_logs', 1);
         $this->assertSame('Ось відповідь.', QueryLog::first()->answer);
