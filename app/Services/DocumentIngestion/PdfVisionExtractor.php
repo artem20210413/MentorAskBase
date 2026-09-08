@@ -32,9 +32,12 @@ class PdfVisionExtractor
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Transcribe all text on this document page image, exactly as written. '
-                                    .'Then, if the page contains meaningful images, diagrams, charts, or tables (not just decorative elements), '
-                                    .'add a short section "[Image description]" describing what they show. No other commentary.',
+                                'text' => 'Describe the full content of this document page as a single coherent piece of text, '
+                                    .'as if explaining the page to someone who cannot see it. '
+                                    .'Include all written text exactly as it appears, woven together with the meaning of any '
+                                    .'images, diagrams, charts, tables, or photos (what they show and what point they illustrate) '
+                                    .'at the point in the text where they belong, so the result reads as one unified description '
+                                    .'of everything on the page. No preamble, no commentary about the task itself.',
                             ],
                             [
                                 'type' => 'image_url',
