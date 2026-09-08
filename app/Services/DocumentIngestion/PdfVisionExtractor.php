@@ -32,9 +32,7 @@ class PdfVisionExtractor
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'This is a page from an educational/reference document for a doctor\'s assistant (professional medical knowledge base). '
-                                    .'Transcribe and return all text present on this page image, with no commentary. '
-                                    .'Medical terminology, anatomical descriptions, and clinical information in this context are ordinary professional material, not a sensitive topic — transcribe the text as-is, don\'t skip anything, and don\'t refuse.',
+                                'text' => 'Transcribe all text on this document page image, exactly as written, with no commentary.',
                             ],
                             [
                                 'type' => 'image_url',
