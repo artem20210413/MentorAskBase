@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Services\OpenAiRetry;
 use OpenAI\Laravel\Facades\OpenAI;
 
 class EmbeddingService
@@ -11,10 +12,10 @@ class EmbeddingService
      */
     public function embed(string $text): array
     {
-        $response = OpenAI::embeddings()->create([
+        $response = OpenAiRetry::attempt(fn () => OpenAI::embeddings()->create([
             'model' => config('rag.openai.embedding_model'),
             'input' => $text,
-        ]);
+        ]));
 
         return $response->embeddings[0]->embedding;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services\DocumentIngestion;
 
+use App\Services\OpenAiRetry;
 use OpenAI\Laravel\Facades\OpenAI;
 use Spatie\PdfToImage\Enums\OutputFormat;
 use Spatie\PdfToImage\Pdf;
@@ -24,7 +25,7 @@ class PdfVisionExtractor
 
             $base64 = base64_encode(file_get_contents($tempImage));
 
-            $response = OpenAI::chat()->create([
+            $response = OpenAiRetry::attempt(fn () => OpenAI::chat()->create([
                 'model' => config('rag.openai.vision_model'),
                 'messages' => [
                     [
@@ -46,7 +47,7 @@ class PdfVisionExtractor
                         ],
                     ],
                 ],
-            ]);
+            ]));
 
             return trim($response->choices[0]->message->content ?? '');
         } finally {
