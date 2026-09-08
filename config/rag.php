@@ -47,6 +47,6 @@ return [
         // дистанцію 0.6-0.9 навіть для змістовно пов'язаних питань — основне
         // рішення "чи достатньо інформації" покладається на LLM через
         // системний промпт (AnswerGenerationService::NO_INFO_MARKER).
-        'max_relevant_distance' => (float) env('RAG_SEARCH_MAX_DISTANCE', 0.9),
+        'max_relevant_distance' => (float) env('RAG_SEARCH_MAX_DISTANCE', 0.7),
     ],
 ];

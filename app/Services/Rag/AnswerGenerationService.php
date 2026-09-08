@@ -30,9 +30,11 @@ class AnswerGenerationService
         $questionEmbedding = $this->embeddingService->embed($question);
         $chunks = $this->vectorSearchService->search($questionEmbedding);
 
-        // FR-009: немає сенсу звертатися до LLM, якщо жодного релевантного
-        // фрагмента не знайдено — одразу чесна відповідь без витрат на виклик.
-        if ($chunks->isEmpty()) {
+        // FR-009: коротка відповідь без виклику LLM — але лише якщо взагалі
+        // немає на що спертися: ні релевантних фрагментів бази знань, ні
+        // історії розмови (з якої можна було б відповісти на мета-питання
+        // на кшталт "про що ми говорили?").
+        if ($chunks->isEmpty() && empty($history)) {
             return [
                 'answer' => $this->noInfoAnswer($detectedLanguage),
                 'language' => $detectedLanguage,
@@ -43,7 +45,7 @@ class AnswerGenerationService
             ];
         }
 
-        $matchScore = $this->matchScore($chunks);
+        $matchScore = $chunks->isEmpty() ? null : $this->matchScore($chunks);
 
         $messages = $this->buildMessages($question, $chunks, $detectedLanguage, $history);
 
@@ -54,7 +56,7 @@ class AnswerGenerationService
         }
 
         $answer = trim($response->choices[0]->message->content ?? '');
-        $isNoInfo = str_contains($answer, self::NO_INFO_MARKER) || $chunks->isEmpty();
+        $isNoInfo = str_contains($answer, self::NO_INFO_MARKER);
 
         return [
             'answer' => $isNoInfo ? $this->noInfoAnswer($detectedLanguage) : $answer,
@@ -90,10 +92,14 @@ class AnswerGenerationService
             ? 'Контекст відсутній.'
             : $chunks->map(fn (DocumentChunk $c, int $i) => '['.($i + 1).'] '.$c->content)->implode("\n\n");
 
-        $system = "Ти — асистент, що відповідає на питання виключно на основі наданого контексту з бази знань.\n".
+        $system = "Ти — доброзичливий, живий співрозмовник, що допомагає людям розібратися з питаннями на основі наданого контексту з бази знань.\n".
+            'Спілкуйся природно й невимушено, як реальна людина в чаті: короткими реченнями, без канцеляриту, без зайвих вступних фраз на кшталт "Згідно з наданим контекстом" чи "На основі документа". '.
+            "Можеш звертатися до співрозмовника напряму, підтримувати тон розмови, ставити уточнювальне запитання, якщо це доречно.\n".
+            "Факти про базу знань бери ЛИШЕ з контексту нижче — нічого не вигадуй і не додавай зі своїх загальних знань.\n".
+            "Якщо питання стосується самої розмови (наприклад, \"про що ми говорили\", \"що я питав раніше\", \"повтори попередню відповідь\") — вільно відповідай на основі попередніх повідомлень цього діалогу, це не вважається вигадуванням.\n".
             "Відповідай мовою з кодом \"{$language}\".\n".
-            'Якщо контекст не містить достатньо інформації для відповіді, поверни рядок '.self::NO_INFO_MARKER.' і нічого більше.'."\n\n".
-            "Контекст:\n{$context}";
+            'Якщо питання стосується бази знань, але контекст справді не містить відповіді, поверни рядок '.self::NO_INFO_MARKER.' і нічого більше.'."\n\n".
+            "Контекст із бази знань:\n{$context}";
 
         return [
             ['role' => 'system', 'content' => $system],
@@ -131,8 +137,8 @@ class AnswerGenerationService
     private function noInfoAnswer(string $language): string
     {
         return match ($language) {
-            'uk' => 'На жаль, у базі знань немає достатньо релевантної інформації для відповіді на це питання.',
-            default => 'Unfortunately, the knowledge base does not contain enough relevant information to answer this question.',
+            'uk' => 'Хм, у мене немає точної інформації з цього приводу в наявних документах. Спробуйте перефразувати питання або запитати про щось інше?',
+            default => "Hmm, I don't have solid information on that in the documents I have. Feel free to rephrase or ask something else!",
         };
     }
 }
