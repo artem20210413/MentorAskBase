@@ -7,7 +7,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
         @livewireStyles
     </head>
-    <body class="antialiased">
+    <body class="bg-neutral-900 antialiased">
         {{ $slot }}
 
         @livewireScripts
