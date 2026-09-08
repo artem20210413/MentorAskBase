@@ -106,7 +106,7 @@ class QuestionAnsweringService
             ->map(fn (DocumentChunk $chunk) => [
                 'document_id' => $chunk->document_id,
                 'page_number' => $chunk->page_number,
-                'relevance' => (int) round(max(0, 1 - $chunk->neighbor_distance) * 100),
+                'relevance' => VectorSearchService::relevancePercent($chunk->neighbor_distance),
             ])
             ->unique(fn (array $ref) => $ref['document_id'].':'.$ref['page_number'])
             ->values()

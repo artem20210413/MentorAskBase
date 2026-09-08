@@ -56,7 +56,6 @@ class AnswerGenerationService
         $matchScore = $chunks->isEmpty() ? null : $this->matchScore($chunks);
 
         $messages = $this->buildMessages($question, $chunks, $detectedLanguage, $history);
-dd($messages, $chunks);
         [$response, $succeeded] = $this->requestWithSingleRetry($messages);
 
         if (!$succeeded) {
@@ -89,7 +88,7 @@ dd($messages, $chunks);
 
     private function percentageFor(float $distance): int
     {
-        return (int)round(max(0, 1 - $distance) * 100);
+        return VectorSearchService::relevancePercent($distance);
     }
 
     /**
@@ -156,9 +155,14 @@ dd($messages, $chunks);
 
     private function noInfoAnswer(string $language): string
     {
+        // FR-009b: якщо для мови немає готового тексту, фолбек на мову за
+        // замовчуванням (перший елемент rag.supported_languages), а не на
+        // жорстко зашиту англійську.
         return match ($language) {
             'uk' => 'Хм, у мене немає точної інформації з цього приводу в наявних документах. Спробуйте перефразувати питання або запитати про щось інше?',
-            default => "Hmm, I don't have solid information on that in the documents I have. Feel free to rephrase or ask something else!",
+            'ru' => 'Хм, у меня нет точной информации по этому поводу в имеющихся документах. Попробуйте перефразировать вопрос или спросить о чём-то другом?',
+            'en' => "Hmm, I don't have solid information on that in the documents I have. Feel free to rephrase or ask something else!",
+            default => $this->noInfoAnswer(config('rag.supported_languages')[0]),
         };
     }
 }

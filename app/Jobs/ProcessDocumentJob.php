@@ -48,19 +48,31 @@ class ProcessDocumentJob implements ShouldQueue
 
         try {
             $absolutePath = Storage::disk(config('rag.document_disk'))->path($document->storage_path);
-            $pageCount = count($textExtractor->extract($absolutePath));
+            $textLayerPages = $textExtractor->extract($absolutePath);
+            $pageCount = count($textLayerPages);
 
             $position = 0;
 
             for ($pageNumber = 1; $pageNumber <= $pageCount; $pageNumber++) {
                 $pageText = $visionExtractor->extractPageText($absolutePath, $pageNumber);
+                $source = 'vision_ocr';
+
+                // Vision-модель іноді відмовляється розпізнавати сторінку
+                // (наприклад, зображення людини на маркетинговому буклеті
+                // сприймається як чутливий контент) і повертає коротку
+                // відмову замість тексту. У такому разі краще взяти те, що
+                // реально є в текстовому шарі PDF, ніж заембедити відмову.
+                if (self::looksLikeRefusal($pageText)) {
+                    $pageText = $textLayerPages[$pageNumber - 1] ?? '';
+                    $source = 'text_layer';
+                }
 
                 foreach ($chunkingService->chunk($pageText) as $chunkText) {
                     $document->chunks()->create([
                         'position' => $position++,
                         'page_number' => $pageNumber,
                         'content' => $chunkText,
-                        'source' => 'vision_ocr',
+                        'source' => $source,
                         'embedding' => $embeddingService->embed($chunkText),
                     ]);
                 }
@@ -78,5 +90,21 @@ class ProcessDocumentJob implements ShouldQueue
                 'failure_reason' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Груба евристика: справжній розпізнаний текст сторінки зазвичай довший
+     * і не складається переважно з типових фраз-відмов OpenAI.
+     */
+    private static function looksLikeRefusal(string $text): bool
+    {
+        if (mb_strlen($text) > 200) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/^(i\'?m (sorry|unable)|i can\'?t|i cannot|i am unable|sorry,)/i',
+            trim($text)
+        );
     }
 }

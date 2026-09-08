@@ -15,14 +15,19 @@ class VectorSearchService
     public function search(array $questionEmbedding): Collection
     {
         $topK = config('rag.search.top_k');
-        $maxDistance = config('rag.search.max_relevant_distance');
+        $minRelevance = config('rag.search.min_relevance_percent');
 
         return DocumentChunk::query()
             ->whereHas('document', fn ($q) => $q->where('status', 'processed'))
             ->nearestNeighbors('embedding', $questionEmbedding, Distance::Cosine)
             ->take($topK)
             ->get()
-            ->filter(fn (DocumentChunk $chunk) => $chunk->neighbor_distance <= $maxDistance)
+            ->filter(fn (DocumentChunk $chunk) => self::relevancePercent($chunk->neighbor_distance) >= $minRelevance)
             ->values();
+    }
+
+    public static function relevancePercent(float $distance): int
+    {
+        return (int) round(max(0, 1 - $distance) * 100);
     }
 }
