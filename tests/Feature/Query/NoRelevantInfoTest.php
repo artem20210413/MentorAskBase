@@ -1,0 +1,29 @@
+<?php
+
+namespace Tests\Feature\Query;
+
+use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\TestCase;
+
+class NoRelevantInfoTest extends TestCase
+{
+    public function test_question_with_no_matching_documents_returns_honest_no_info_answer(): void
+    {
+        $this->authenticateApiClient();
+
+        $dimensions = config('rag.openai.embedding_dimensions', 1536);
+
+        OpenAI::fake([
+            EmbeddingsCreateResponse::fake([
+                'data' => [['embedding' => array_fill(0, $dimensions, 0.1)]],
+            ]),
+        ]);
+
+        $response = $this->postJson('/api/v1/queries', ['question' => 'Питання без жодного релевантного документа?']);
+
+        $response->assertOk();
+        $response->assertJsonPath('sources', []);
+        $this->assertNotEmpty($response->json('answer'));
+    }
+}
