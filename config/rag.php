@@ -36,6 +36,11 @@ return [
         'embedding_dimensions' => (int) env('OPENAI_EMBEDDING_DIMENSIONS', 1536),
     ],
 
+    'chunking' => [
+        // FR-004: максимальна довжина (у символах) одного фрагмента тексту для ембедингу
+        'max_length' => (int) env('RAG_CHUNK_MAX_LENGTH', 1500),
+    ],
+
     'search' => [
         // Скільки максимум найближчих фрагментів передавати в LLM (FR-008)
         'top_k' => (int) env('RAG_SEARCH_TOP_K', 5),

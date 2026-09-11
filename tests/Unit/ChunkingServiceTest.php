@@ -9,12 +9,12 @@ class ChunkingServiceTest extends TestCase
 {
     public function test_empty_text_produces_no_chunks(): void
     {
-        $this->assertSame([], (new ChunkingService)->chunk('   '));
+        $this->assertSame([], (new ChunkingService(1500))->chunk('   '));
     }
 
     public function test_short_text_becomes_single_chunk(): void
     {
-        $chunks = (new ChunkingService)->chunk("Перший абзац.\n\nДругий абзац.");
+        $chunks = (new ChunkingService(1500))->chunk("Перший абзац.\n\nДругий абзац.");
 
         $this->assertSame(['Перший абзац. Другий абзац.'], $chunks);
     }
@@ -23,7 +23,7 @@ class ChunkingServiceTest extends TestCase
     {
         $longParagraph = str_repeat('слово ', 400); // явно перевищує ліміт у 1500 символів
 
-        $chunks = (new ChunkingService)->chunk($longParagraph);
+        $chunks = (new ChunkingService(1500))->chunk($longParagraph);
 
         $this->assertGreaterThan(1, count($chunks));
         foreach ($chunks as $chunk) {

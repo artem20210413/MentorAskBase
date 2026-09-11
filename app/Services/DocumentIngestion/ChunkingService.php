@@ -4,7 +4,12 @@ namespace App\Services\DocumentIngestion;
 
 class ChunkingService
 {
-    private const MAX_CHUNK_LENGTH = 1500;
+    private readonly int $maxChunkLength;
+
+    public function __construct(?int $maxChunkLength = null)
+    {
+        $this->maxChunkLength = $maxChunkLength ?? (int) config('rag.chunking.max_length', 1500);
+    }
 
     /**
      * FR-004: розбиває текст сторінки на фрагменти прийнятного розміру для ембедингу.
@@ -31,13 +36,13 @@ class ChunkingService
                 continue;
             }
 
-            if ($current !== '' && mb_strlen($current.' '.$paragraph) > self::MAX_CHUNK_LENGTH) {
+            if ($current !== '' && mb_strlen($current.' '.$paragraph) > $this->maxChunkLength) {
                 $chunks[] = trim($current);
                 $current = '';
             }
 
-            if (mb_strlen($paragraph) > self::MAX_CHUNK_LENGTH) {
-                foreach (mb_str_split($paragraph, self::MAX_CHUNK_LENGTH) as $piece) {
+            if (mb_strlen($paragraph) > $this->maxChunkLength) {
+                foreach (mb_str_split($paragraph, $this->maxChunkLength) as $piece) {
                     $chunks[] = trim($piece);
                 }
 
