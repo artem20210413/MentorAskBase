@@ -20,6 +20,11 @@ class ProcessDocumentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    // Документ обробляється сторінка за сторінкою через vision-модель
+    // послідовними запитами до OpenAI — на багатосторінкових файлах дефолтний
+    // таймаут воркера (60с) не вистачає.
+    public $timeout = 600;
+
     public function __construct(public readonly string $documentId) {}
 
     /**

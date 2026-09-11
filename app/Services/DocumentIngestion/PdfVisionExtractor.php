@@ -33,12 +33,20 @@ class PdfVisionExtractor
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Describe the full content of this document page as a single coherent piece of text, '
-                                    .'as if explaining the page to someone who cannot see it. '
-                                    .'Include all written text exactly as it appears, woven together with the meaning of any '
-                                    .'images, diagrams, charts, tables, or photos (what they show and what point they illustrate) '
-                                    .'at the point in the text where they belong, so the result reads as one unified description '
-                                    .'of everything on the page. No preamble, no commentary about the task itself.',
+                                'text' => 'Transcribe this document page for a knowledge-base search system. Follow these rules exactly:'
+                                    ."\n\n"
+                                    .'1. TEXT: Transcribe every piece of written text on the page verbatim — headings, body text, '
+                                    .'labels, captions, footnotes, numbers, table contents — exactly as written, preserving reading '
+                                    .'order and structure (use Markdown: # for headings, - for lists, | for tables).'
+                                    ."\n\n"
+                                    .'2. VISUALS: For every image, photo, diagram, chart, icon, or illustration, insert a detailed '
+                                    .'description at the point where it appears on the page, wrapped like this: '
+                                    .'[VISUAL: describe what is shown, all visible text/labels/values inside it, and what point or '
+                                    .'information it conveys — do not just name the visual, explain its content in full]. '
+                                    .'Be exhaustive here: images often carry information not present anywhere in the surrounding text.'
+                                    ."\n\n"
+                                    .'3. Do not summarize, paraphrase, shorten, or skip anything. Do not add commentary, preamble, or '
+                                    .'meta-notes about the task itself — output only the transcription.',
                             ],
                             [
                                 'type' => 'image_url',
