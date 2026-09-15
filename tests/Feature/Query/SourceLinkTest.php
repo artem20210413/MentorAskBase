@@ -4,14 +4,17 @@ namespace Tests\Feature\Query;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use Illuminate\Support\Facades\Storage;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class SourceLinkTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_source_includes_page_number_and_direct_storage_link(): void
     {
         Storage::fake('public');
@@ -29,8 +32,9 @@ class SourceLinkTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Відповідь.']]]]),
+            $this->fakeFinalAnswer('Відповідь.'),
         ]);
 
         $response = $this->postJson('/api/v1/queries', ['question' => 'Питання?']);

@@ -4,14 +4,17 @@ namespace Tests\Feature\Session;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use Illuminate\Support\Str;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class UnknownSessionTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_unknown_session_id_creates_new_session_without_error(): void
     {
         $this->authenticateApiClient();
@@ -23,8 +26,9 @@ class UnknownSessionTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання з вигаданою сесією?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Відповідь.']]]]),
+            $this->fakeFinalAnswer('Відповідь.'),
         ]);
 
         $fakeSessionId = (string) Str::uuid();

@@ -50,8 +50,11 @@ class PublicChat extends Component
         $this->sessionId = $log->conversation_session_id;
 
         $sources = collect($questionAnsweringService->sources($log))
-            ->unique('document_name')
-            ->map(fn (array $source) => ['name' => $source['document_name'], 'url' => $source['url']])
+            ->map(fn (array $source) => [
+                'name' => $source['type'] === 'web' ? $source['title'] : $source['document_name'],
+                'url' => $source['url'],
+            ])
+            ->unique('name')
             ->values()
             ->all();
 

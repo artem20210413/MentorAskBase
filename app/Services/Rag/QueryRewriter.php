@@ -27,11 +27,7 @@ class QueryRewriter
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'You help build a clear search query. The user\'s latest message below may rely on '.
-                    'context from the earlier conversation (pronouns, shorthand references like "and the second '.
-                    'one?"). Rewrite it into a self-contained question that makes sense without the history, using '.
-                    'concrete terms from the earlier messages. If the question is already self-contained, return it '.
-                    'unchanged. Output ONLY the final question, no explanations or quotes.',
+                'content' => __('bot.query_rewrite_instruction'),
             ],
             ...$history,
             ['role' => 'user', 'content' => $question],

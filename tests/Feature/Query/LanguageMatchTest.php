@@ -4,13 +4,16 @@ namespace Tests\Feature\Query;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class LanguageMatchTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_answer_language_matches_question_language(): void
     {
         $this->authenticateApiClient();
@@ -22,8 +25,9 @@ class LanguageMatchTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'What is the warranty period for product X?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Answer in English.']]]]),
+            $this->fakeFinalAnswer('Answer in English.'),
         ]);
 
         $response = $this->postJson('/api/v1/queries', ['question' => 'What is the warranty period for product X?']);
@@ -42,13 +46,16 @@ class LanguageMatchTest extends TestCase
             'embedding' => array_fill(0, $dimensions, 0.1),
         ]);
 
+        $question = "Quelle est la garantie du produit X? C'est une question en français avec suffisamment de texte pour la détection.";
+
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => $question]),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Відповідь мовою за замовчуванням.']]]]),
+            $this->fakeFinalAnswer('Відповідь мовою за замовчуванням.'),
         ]);
 
         // Питання французькою — не входить до RAG_SUPPORTED_LANGUAGES=uk,en
-        $response = $this->postJson('/api/v1/queries', ['question' => "Quelle est la garantie du produit X? C'est une question en français avec suffisamment de texte pour la détection."]);
+        $response = $this->postJson('/api/v1/queries', ['question' => $question]);
 
         $response->assertOk();
         $response->assertJsonPath('answer_language', 'uk');

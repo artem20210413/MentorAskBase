@@ -13,7 +13,11 @@ use RuntimeException;
 
 class DocumentUploadService
 {
-    public function __construct(private readonly PdfTextExtractor $textExtractor) {}
+    public function __construct(
+        private readonly PdfTextExtractor $textExtractor,
+        private readonly WordTextExtractor $wordTextExtractor,
+        private readonly TextFileExtractor $textFileExtractor,
+    ) {}
 
     /**
      * FR-001/FR-001a/FR-001b/FR-002/FR-003/FR-003a: приймає файл, синхронно
@@ -21,8 +25,9 @@ class DocumentUploadService
      */
     public function upload(UploadedFile $file): Document
     {
-        // FR-001b: синхронна перевірка цілісності/формату файлу
-        $this->textExtractor->assertReadable($file->getRealPath());
+        // FR-001b/FR-003: синхронна перевірка цілісності/формату файлу,
+        // специфічна для розширення (pdf/docx/txt)
+        $this->assertReadable($file);
 
         $hash = hash_file('sha256', $file->getRealPath());
 
@@ -78,6 +83,21 @@ class DocumentUploadService
 
             return $document;
         });
+    }
+
+    /**
+     * FR-003: делегує синхронну перевірку цілісності/формату відповідному
+     * екстрактору залежно від розширення файлу.
+     */
+    private function assertReadable(UploadedFile $file): void
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        match ($extension) {
+            'docx' => $this->wordTextExtractor->assertReadable($file->getRealPath()),
+            'txt' => $this->textFileExtractor->assertReadable($file->getRealPath()),
+            default => $this->textExtractor->assertReadable($file->getRealPath()),
+        };
     }
 
     /**

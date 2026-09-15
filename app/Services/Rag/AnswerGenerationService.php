@@ -2,30 +2,25 @@
 
 namespace App\Services\Rag;
 
-use App\Models\DocumentChunk;
 use App\Services\Conversation\LanguageDetectionService;
-use Illuminate\Support\Collection;
-use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use Throwable;
 
 class AnswerGenerationService
 {
-    /** Відповідь, коли релевантної інформації не знайдено (FR-009). */
-    private const NO_INFO_MARKER = '__NO_RELEVANT_INFO__';
-
     public function __construct(
-        private readonly EmbeddingService         $embeddingService,
-        private readonly VectorSearchService      $vectorSearchService,
         private readonly LanguageDetectionService $languageDetectionService,
-        private readonly QueryRewriter            $queryRewriter,
-    )
-    {
-    }
+        private readonly QueryRewriter $queryRewriter,
+        private readonly AgentToolRunner $agentToolRunner,
+    ) {}
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
-     * @return array{answer: string, language: string, sources: Collection<int, DocumentChunk>, match_score: ?int, input_tokens: ?int, output_tokens: ?int}
+     * FR-001/FR-002/FR-004/FR-005/FR-006/FR-007/FR-008: формує відповідь
+     * через обмежений агентний цикл (AgentToolRunner) — модель сама вирішує,
+     * чи звертатися до бази знань і/або інтернету, замість фіксованого
+     * "завжди спершу RAG".
+     *
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @return array{answer: string, language: string, sources: array<int, array<string, mixed>>, match_score: ?int, input_tokens: ?int, output_tokens: ?int, tool_steps: array<int, array<string, mixed>>}
      */
     public function answer(string $question, array $history = []): array
     {
@@ -33,116 +28,85 @@ class AnswerGenerationService
 
         // Переформульовуємо питання для пошуку на основі історії розмови
         // (наприклад, "а другий?" → "яка гарантія на виріб Y?"); для першого
-        // питання сесії (без історії) повертається без змін.
+        // питання сесії (без історії) повертається без змін. Модель бачить
+        // обидва варіанти — оригінальне питання (для тону) і самодостатнє
+        // формулювання (щоб точніше сформувати запит до search_knowledge_base).
         $retrievalQuestion = $this->queryRewriter->rewriteForRetrieval($question, $history);
-        $questionEmbedding = $this->embeddingService->embed($retrievalQuestion);
-        $chunks = $this->vectorSearchService->search($questionEmbedding);
 
-        // FR-009: коротка відповідь без виклику LLM — але лише якщо взагалі
-        // немає на що спертися: ні релевантних фрагментів бази знань, ні
-        // історії розмови (з якої можна було б відповісти на мета-питання
-        // на кшталт "про що ми говорили?").
-        if ($chunks->isEmpty() && empty($history)) {
-            return [
-                'answer' => $this->noInfoAnswer($detectedLanguage),
-                'language' => $detectedLanguage,
-                'sources' => collect(),
-                'match_score' => null,
-                'input_tokens' => null,
-                'output_tokens' => null,
+        $input = [...$history];
+
+        if ($retrievalQuestion !== $question) {
+            $input[] = [
+                'role' => 'developer',
+                'content' => "Self-contained version of the user's next question, for search purposes only: {$retrievalQuestion}",
             ];
         }
 
-        $matchScore = $chunks->isEmpty() ? null : $this->matchScore($chunks);
+        $input[] = ['role' => 'user', 'content' => $question];
 
-        $messages = $this->buildMessages($question, $chunks, $detectedLanguage, $history);
-        [$response, $succeeded] = $this->requestWithSingleRetry($messages);
+        $instructions = $this->buildInstructions($detectedLanguage);
 
-        if (!$succeeded) {
+        [$result, $succeeded] = $this->runWithSingleRetry($instructions, $input);
+
+        if (! $succeeded) {
             throw new RagAnswerGenerationException('Зовнішній сервіс мовної моделі недоступний після повторної спроби.');
         }
 
-        $answer = trim($response->choices[0]->message->content ?? '');
-        $isNoInfo = str_contains($answer, self::NO_INFO_MARKER);
+        $answer = $result['answer'];
+        $noInfoMarker = __('bot.no_relevant_info_marker');
+        $isNoInfo = $answer === '' || str_contains($answer, $noInfoMarker);
 
         return [
             'answer' => $isNoInfo ? $this->noInfoAnswer($detectedLanguage) : $answer,
             'language' => $detectedLanguage,
-            'sources' => $isNoInfo ? collect() : $chunks,
-            'match_score' => $isNoInfo ? null : $matchScore,
-            'input_tokens' => $response->usage->promptTokens ?? null,
-            'output_tokens' => $response->usage->completionTokens ?? null,
+            'sources' => $isNoInfo ? [] : $result['sources'],
+            'match_score' => $isNoInfo ? null : $this->matchScore($result['sources']),
+            'input_tokens' => $result['input_tokens'],
+            'output_tokens' => $result['output_tokens'],
+            'tool_steps' => $result['tool_steps'],
         ];
     }
 
     /**
-     * Відсоток релевантності найкращого (найближчого) фрагмента серед
-     * знайдених: косинусна відстань 0 → 100%, відстань 1+ → 0%.
+     * Найвищий відсоток релевантності серед джерел-документів, використаних
+     * у відповіді (null, якщо жодного документа не було використано).
      *
-     * @param Collection<int, DocumentChunk> $chunks
+     * @param  array<int, array<string, mixed>>  $sources
      */
-    private function matchScore(Collection $chunks): int
+    private function matchScore(array $sources): ?int
     {
-        return $this->percentageFor($chunks->min('neighbor_distance'));
+        $relevances = array_filter(array_map(
+            fn (array $s) => $s['type'] === 'document' ? $s['relevance'] : null,
+            $sources
+        ), fn ($r) => $r !== null);
+
+        return $relevances === [] ? null : max($relevances);
     }
 
-    private function percentageFor(float $distance): int
+    private function buildInstructions(string $language): string
     {
-        return VectorSearchService::relevancePercent($distance);
-    }
-
-    /**
-     * @param Collection<int, DocumentChunk> $chunks
-     * @param array<int, array{role: string, content: string}> $history
-     * @return array<int, array{role: string, content: string}>
-     */
-    private function buildMessages(string $question, Collection $chunks, string $language, array $history): array
-    {
-        // Кожен фрагмент супроводжується відсотком релевантності — LLM сама
-        // вирішує, якому фрагменту довіряти більше, якщо вони різняться чи
-        // суперечать один одному, замість сліпо покладатися на порядок.
-        $context = $chunks->isEmpty()
-            ? 'No context available.'
-            : $chunks->map(function (DocumentChunk $c, int $i) {
-                $percentage = $this->percentageFor($c->neighbor_distance);
-
-                return '[' . ($i + 1) . "] (relevance: {$percentage}%) {$c->content}";
-            })->implode("\n\n");
-
-        $system = "You are a friendly, lively conversational partner who helps people with questions based on the provided knowledge-base context.\n" .
-            'Speak naturally and casually, like a real person in a chat: short sentences, no corporate-speak, no filler intros like "According to the provided context" or "Based on the document". ' .
-            "You can address the person directly, keep the conversational tone, and ask a clarifying question when it makes sense.\n" .
-            "Take knowledge-base facts ONLY from the context below — don't make anything up or add from your general knowledge.\n" .
-            "Each context fragment has a relevance percentage (100% — exact match, 0% — barely related). " .
-            "Trust higher-percentage fragments first; if fragments contradict each other or only one actually answers the question — pick the most relevant one, not just the first one.\n" .
-            "If the question is about the conversation itself (e.g. \"what did we talk about\", \"what did I ask earlier\", \"repeat the previous answer\") — answer freely based on the earlier messages in this dialogue, that's not considered making things up.\n" .
-            "Answer in the language with code \"{$language}\".\n" .
-            'If the question is about the knowledge base but no fragment actually contains the answer, return the string ' . self::NO_INFO_MARKER . ' and nothing else.' . "\n\n" .
-            "Knowledge-base context:\n{$context}";
-
-        return [
-            ['role' => 'system', 'content' => $system],
-            ...$history,
-            ['role' => 'user', 'content' => $question],
+        $parts = [
+            __('bot.system_identity'),
+            __('bot.answer_style'),
+            __('bot.medical_disclaimer_instruction'),
+            "Answer in the language with code \"{$language}\".",
+            'If, after using the available tools, no source actually contains the answer, return the string '.__('bot.no_relevant_info_marker').' and nothing else.',
         ];
+
+        return implode("\n\n", $parts);
     }
 
     /**
      * FR-009c: рівно одна автоматична повторна спроба при збої LLM.
      *
-     * @param array<int, array{role: string, content: string}> $messages
-     * @return array{0: ?CreateResponse, 1: bool}
+     * @param  array<int, mixed>  $input
+     * @return array{0: ?array<string, mixed>, 1: bool}
      */
-    private function requestWithSingleRetry(array $messages): array
+    private function runWithSingleRetry(string $instructions, array $input): array
     {
         for ($attempt = 0; $attempt < 2; $attempt++) {
             try {
-                $response = OpenAI::chat()->create([
-                    'model' => config('rag.openai.chat_model'),
-                    'messages' => $messages,
-                ]);
-
-                return [$response, true];
+                return [$this->agentToolRunner->run($instructions, $input), true];
             } catch (Throwable $e) {
                 if ($attempt === 1) {
                     return [null, false];

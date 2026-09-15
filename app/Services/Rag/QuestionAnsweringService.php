@@ -3,10 +3,8 @@
 namespace App\Services\Rag;
 
 use App\Models\Document;
-use App\Models\DocumentChunk;
 use App\Models\QueryLog;
 use App\Services\Conversation\ConversationSessionService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -45,25 +43,47 @@ class QuestionAnsweringService
             'llm_output_tokens' => $result['output_tokens'],
         ]);
 
+        // FR-013: структурований журнал кроків агента, прив'язаний до цього
+        // запису журналу питання-відповіді.
+        if ($result['tool_steps'] !== []) {
+            $log->toolSteps()->createMany($result['tool_steps']);
+        }
+
         $session->update(['last_activity_at' => now()]);
 
         return $log;
     }
 
     /**
-     * Джерела відповіді з назвою документа, прямим посиланням і відсотком
-     * релевантності фрагмента, з якого взято інформацію (FR-009d).
+     * Джерела відповіді — документи бази знань і/або результати
+     * інтернет-пошуку (FR-003, FR-009d).
      *
-     * @return array<int, array{document_id: string, document_name: string, page_number: ?int, relevance: int, url: string}>
+     * @return array<int, array<string, mixed>>
      */
     public function sources(QueryLog $log): array
     {
         $references = $log->source_document_ids ?? [];
-        $documents = Document::withTrashed()->find(collect($references)->pluck('document_id')->unique())
-            ->keyBy('id');
+
+        $documentIds = collect($references)
+            ->filter(fn (array $ref) => ($ref['type'] ?? 'document') === 'document')
+            ->pluck('document_id')
+            ->unique();
+
+        $documents = Document::withTrashed()->find($documentIds)->keyBy('id');
 
         return collect($references)
             ->map(function (array $ref) use ($documents) {
+                $type = $ref['type'] ?? 'document';
+
+                if ($type === 'web') {
+                    return [
+                        'type' => 'web',
+                        'url' => $ref['url'],
+                        'title' => $ref['title'] ?? null,
+                        'relevance' => $ref['relevance'] ?? null,
+                    ];
+                }
+
                 $document = $documents->get($ref['document_id']);
 
                 if (! $document) {
@@ -76,6 +96,7 @@ class QuestionAnsweringService
                 $url = Storage::disk(config('rag.document_disk'))->url($document->storage_path);
 
                 return [
+                    'type' => 'document',
                     'document_id' => $document->id,
                     'document_name' => $document->original_name,
                     'page_number' => $ref['page_number'],
@@ -92,23 +113,19 @@ class QuestionAnsweringService
     }
 
     /**
-     * Унікальні пари (документ, сторінка), використані для відповіді, з
-     * відсотком релевантності — найрелевантніші (найближчі) фрагменти йдуть
-     * першими. Якщо на одну сторінку припадає кілька фрагментів, лишається
-     * той, що дав найвищу релевантність.
+     * Унікальні джерела (документ+сторінка або URL), використані для
+     * відповіді, з відсотком релевантності — найрелевантніші йдуть першими.
      *
-     * @param  Collection<int, DocumentChunk>  $chunks
-     * @return array<int, array{document_id: string, page_number: ?int, relevance: int}>
+     * @param  array<int, array<string, mixed>>  $sources
+     * @return array<int, array<string, mixed>>
      */
-    private function sourceReferences(Collection $chunks): array
+    private function sourceReferences(array $sources): array
     {
-        return $chunks
-            ->map(fn (DocumentChunk $chunk) => [
-                'document_id' => $chunk->document_id,
-                'page_number' => $chunk->page_number,
-                'relevance' => VectorSearchService::relevancePercent($chunk->neighbor_distance),
-            ])
-            ->unique(fn (array $ref) => $ref['document_id'].':'.$ref['page_number'])
+        return collect($sources)
+            ->map(fn (array $s) => $s['type'] === 'web'
+                ? ['type' => 'web', 'url' => $s['url'], 'title' => $s['title'] ?? null, 'relevance' => $s['relevance'] ?? null]
+                : ['type' => 'document', 'document_id' => $s['document_id'], 'page_number' => $s['page_number'], 'relevance' => $s['relevance']])
+            ->unique(fn (array $ref) => $ref['type'] === 'web' ? 'web:'.$ref['url'] : 'document:'.$ref['document_id'].':'.$ref['page_number'])
             ->values()
             ->all();
     }

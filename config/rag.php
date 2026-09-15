@@ -55,4 +55,21 @@ return [
         // (AnswerGenerationService::NO_INFO_MARKER).
         'min_relevance_percent' => (int) env('RAG_SEARCH_MIN_RELEVANCE', 30),
     ],
+
+    'agent' => [
+        // FR-006: ліміт кроків циклу виклику інструментів (search_knowledge_base)
+        // на одне питання — технічний запобіжник, щоб гарантувати відповідь
+        // за прийнятний час навіть для складних питань.
+        'max_tool_steps' => (int) env('RAG_AGENT_MAX_STEPS', 4),
+    ],
+
+    'web_search' => [
+        // FR-008a/b: перелік доменів, на які обмежується вбудований
+        // інструмент web_search. Порожній перелік (за замовчуванням) —
+        // пошук не обмежується конкретними сайтами.
+        'allowed_domains' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('RAG_WEB_SEARCH_ALLOWED_DOMAINS', ''))
+        ))),
+    ],
 ];

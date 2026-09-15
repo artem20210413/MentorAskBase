@@ -4,13 +4,16 @@ namespace Tests\Feature\Query;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class AnswerSourcesTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_answer_includes_source_document_name(): void
     {
         $this->authenticateApiClient();
@@ -22,8 +25,9 @@ class AnswerSourcesTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання по документу?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Відповідь із джерела.']]]]),
+            $this->fakeFinalAnswer('Відповідь із джерела.'),
         ]);
 
         $response = $this->postJson('/api/v1/queries', ['question' => 'Питання по документу?']);

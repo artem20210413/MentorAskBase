@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\DocumentIngestion\PdfVisionExtractor;
+use App\Services\DocumentIngestion\VisionTranscriber;
 use OpenAI\Laravel\Facades\OpenAI;
 use OpenAI\Resources\Chat;
 use OpenAI\Responses\Chat\CreateResponse;
@@ -26,7 +27,7 @@ class PdfVisionExtractorTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'rag_test_').'.pdf';
         file_put_contents($path, $this->textlessPdfContent());
 
-        $text = (new PdfVisionExtractor)->extractPageText($path, 1);
+        $text = (new PdfVisionExtractor(new VisionTranscriber))->extractPageText($path, 1);
 
         $this->assertSame('Розпізнаний текст зі сторінки', $text);
 

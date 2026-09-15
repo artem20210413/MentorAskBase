@@ -5,13 +5,16 @@ namespace Tests\Feature\Query;
 use App\Models\Document;
 use App\Models\DocumentChunk;
 use App\Models\QueryLog;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class MatchScoreTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_best_match_score_is_stored_for_identical_embedding(): void
     {
         $this->authenticateApiClient();
@@ -23,8 +26,9 @@ class MatchScoreTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Відповідь.']]]]),
+            $this->fakeFinalAnswer('Відповідь.'),
         ]);
 
         $response = $this->postJson('/api/v1/queries', ['question' => 'Питання?']);
@@ -43,7 +47,9 @@ class MatchScoreTest extends TestCase
         $dimensions = config('rag.openai.embedding_dimensions', 1536);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання без документів?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
+            $this->fakeFinalAnswer(__('bot.no_relevant_info_marker')),
         ]);
 
         $response = $this->postJson('/api/v1/queries', ['question' => 'Питання без документів?']);

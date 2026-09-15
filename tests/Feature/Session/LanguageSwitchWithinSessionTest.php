@@ -4,13 +4,17 @@ namespace Tests\Feature\Session;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
+use OpenAI\Responses\Chat\CreateResponse as ChatCreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class LanguageSwitchWithinSessionTest extends TestCase
 {
+    use FakesAgentResponses;
+
     /**
      * Edge case зі spec.md: мова визначається окремо для кожного питання
      * (FR-009a), тож відповідь на друге питання іншою мовою в тій самій
@@ -27,12 +31,14 @@ class LanguageSwitchWithinSessionTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Яка гарантія на виріб X?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Гарантія 24 місяці.']]]]),
+            $this->fakeFinalAnswer('Гарантія 24 місяці.'),
             // Друге питання: спершу переформулювання запиту на основі історії (QueryRewriter)
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'What is the warranty for product X?']]]]),
+            ChatCreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'What is the warranty for product X?']]]]),
+            $this->fakeFunctionToolCall('call_2', KnowledgeBaseSearchTool::NAME, ['query' => 'What is the warranty for product X?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'The warranty is 24 months.']]]]),
+            $this->fakeFinalAnswer('The warranty is 24 months.'),
         ]);
 
         $first = $this->postJson('/api/v1/queries', ['question' => 'Яка гарантія на виріб X?']);

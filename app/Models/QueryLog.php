@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class QueryLog extends Model
@@ -52,5 +53,12 @@ class QueryLog extends Model
     public function feedback(): HasOne
     {
         return $this->hasOne(AnswerFeedback::class);
+    }
+
+    // FR-013: структурований журнал кроків агента (базa знань/веб-пошук),
+    // виконаних під час формування відповіді на це питання.
+    public function toolSteps(): HasMany
+    {
+        return $this->hasMany(AgentToolStep::class)->orderBy('step_number');
     }
 }

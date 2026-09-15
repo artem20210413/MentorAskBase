@@ -6,14 +6,17 @@ use App\Livewire\PublicChat;
 use App\Models\Document;
 use App\Models\DocumentChunk;
 use App\Models\QueryLog;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use Livewire\Livewire;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class PublicChatTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_chat_page_is_accessible_without_authentication(): void
     {
         $this->get('/chat')->assertOk();
@@ -28,8 +31,9 @@ class PublicChatTest extends TestCase
         ]);
 
         OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання про документ?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Ось відповідь.']]]]),
+            $this->fakeFinalAnswer('Ось відповідь.'),
         ]);
 
         $component = Livewire::test(PublicChat::class)

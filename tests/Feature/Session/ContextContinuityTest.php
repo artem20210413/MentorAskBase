@@ -4,14 +4,18 @@ namespace Tests\Feature\Session;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
 use OpenAI\Resources\Chat;
-use OpenAI\Responses\Chat\CreateResponse;
+use OpenAI\Responses\Chat\CreateResponse as ChatCreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class ContextContinuityTest extends TestCase
 {
+    use FakesAgentResponses;
+
     public function test_second_question_in_session_includes_previous_history_in_llm_request(): void
     {
         $this->authenticateApiClient();
@@ -23,12 +27,15 @@ class ContextContinuityTest extends TestCase
         ]);
 
         OpenAI::fake([
+            // Перше питання (без історії — без переформулювання)
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Яка гарантія на виріб X?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Гарантія 24 місяці.']]]]),
+            $this->fakeFinalAnswer('Гарантія 24 місяці.'),
             // Друге питання: спершу переформулювання запиту на основі історії (QueryRewriter)
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Яка гарантія на виріб Y?']]]]),
+            ChatCreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'Яка гарантія на виріб Y?']]]]),
+            $this->fakeFunctionToolCall('call_2', KnowledgeBaseSearchTool::NAME, ['query' => 'Яка гарантія на виріб Y?']),
             EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
-            CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => 'А для виробу Y — 12 місяців.']]]]),
+            $this->fakeFinalAnswer('А для виробу Y — 12 місяців.'),
         ]);
 
         $first = $this->postJson('/api/v1/queries', ['question' => 'Яка гарантія на виріб X?']);

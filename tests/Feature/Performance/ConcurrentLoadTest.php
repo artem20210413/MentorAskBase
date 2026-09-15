@@ -4,13 +4,16 @@ namespace Tests\Feature\Performance;
 
 use App\Models\Document;
 use App\Models\DocumentChunk;
+use App\Services\Rag\KnowledgeBaseSearchTool;
 use OpenAI\Laravel\Facades\OpenAI;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingsCreateResponse;
+use Tests\Support\FakesAgentResponses;
 use Tests\TestCase;
 
 class ConcurrentLoadTest extends TestCase
 {
+    use FakesAgentResponses;
+
     /**
      * SC-008: система коректно обробляє базу знань обсягом до ~1000
      * документів і одночасну роботу 5-10 користувачів без відмов чи
@@ -44,8 +47,9 @@ class ConcurrentLoadTest extends TestCase
 
         $fakes = [];
         for ($i = 0; $i < $clientsCount; $i++) {
+            $fakes[] = $this->fakeFunctionToolCall("call_{$i}", KnowledgeBaseSearchTool::NAME, ['query' => "Питання від клієнта {$i}?"]);
             $fakes[] = EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]);
-            $fakes[] = CreateResponse::fake(['choices' => [['message' => ['role' => 'assistant', 'content' => "Відповідь клієнту {$i}."]]]]);
+            $fakes[] = $this->fakeFinalAnswer("Відповідь клієнту {$i}.");
         }
         OpenAI::fake($fakes);
 
