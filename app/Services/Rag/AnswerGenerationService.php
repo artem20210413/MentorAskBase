@@ -9,9 +9,11 @@ class AnswerGenerationService
 {
     public function __construct(
         private readonly LanguageDetectionService $languageDetectionService,
-        private readonly QueryRewriter $queryRewriter,
-        private readonly AgentToolRunner $agentToolRunner,
-    ) {}
+        private readonly QueryRewriter            $queryRewriter,
+        private readonly AgentToolRunner          $agentToolRunner,
+    )
+    {
+    }
 
     /**
      * FR-001/FR-002/FR-004/FR-005/FR-006/FR-007/FR-008: формує відповідь
@@ -19,7 +21,7 @@ class AnswerGenerationService
      * чи звертатися до бази знань і/або інтернету, замість фіксованого
      * "завжди спершу RAG".
      *
-     * @param  array<int, array{role: string, content: string}>  $history
+     * @param array<int, array{role: string, content: string}> $history
      * @return array{answer: string, language: string, sources: array<int, array<string, mixed>>, match_score: ?int, input_tokens: ?int, output_tokens: ?int, tool_steps: array<int, array<string, mixed>>}
      */
     public function answer(string $question, array $history = []): array
@@ -48,7 +50,7 @@ class AnswerGenerationService
 
         [$result, $succeeded] = $this->runWithSingleRetry($instructions, $input);
 
-        if (! $succeeded) {
+        if (!$succeeded) {
             throw new RagAnswerGenerationException('Зовнішній сервіс мовної моделі недоступний після повторної спроби.');
         }
 
@@ -71,14 +73,14 @@ class AnswerGenerationService
      * Найвищий відсоток релевантності серед джерел-документів, використаних
      * у відповіді (null, якщо жодного документа не було використано).
      *
-     * @param  array<int, array<string, mixed>>  $sources
+     * @param array<int, array<string, mixed>> $sources
      */
     private function matchScore(array $sources): ?int
     {
         $relevances = array_filter(array_map(
-            fn (array $s) => $s['type'] === 'document' ? $s['relevance'] : null,
+            fn(array $s) => $s['type'] === 'document' ? $s['relevance'] : null,
             $sources
-        ), fn ($r) => $r !== null);
+        ), fn($r) => $r !== null);
 
         return $relevances === [] ? null : max($relevances);
     }
@@ -89,8 +91,9 @@ class AnswerGenerationService
             __('bot.system_identity'),
             __('bot.answer_style'),
             __('bot.medical_disclaimer_instruction'),
+            __('bot.tool_usage_instruction'),
             "Answer in the language with code \"{$language}\".",
-            'If, after using the available tools, no source actually contains the answer, return the string '.__('bot.no_relevant_info_marker').' and nothing else.',
+            'If, after using the available tools, no source actually contains the answer, return the string ' . __('bot.no_relevant_info_marker') . ' and nothing else.',
         ];
 
         return implode("\n\n", $parts);
@@ -99,7 +102,7 @@ class AnswerGenerationService
     /**
      * FR-009c: рівно одна автоматична повторна спроба при збої LLM.
      *
-     * @param  array<int, mixed>  $input
+     * @param array<int, mixed> $input
      * @return array{0: ?array<string, mixed>, 1: bool}
      */
     private function runWithSingleRetry(string $instructions, array $input): array

@@ -61,6 +61,7 @@ class AgentToolRunner
             }
 
             $functionCalls = [];
+            $lastWebSearchStepIndex = null;
 
             foreach ($response->output as $item) {
                 if ($item instanceof OutputFunctionToolCall) {
@@ -76,6 +77,7 @@ class AgentToolRunner
                         'input' => $item->action?->query ?? '',
                         'output' => $this->summarizeWebSearchAction($item),
                     ];
+                    $lastWebSearchStepIndex = count($toolSteps) - 1;
 
                     continue;
                 }
@@ -84,6 +86,19 @@ class AgentToolRunner
                     [$text, $webSources] = $this->extractMessage($item);
                     $finalText = ($finalText ?? '').$text;
                     array_push($sources, ...$webSources);
+
+                    // FR-013: action->sources від OpenAI для web_search_call
+                    // завжди null (API не віддає перелік знайдених сторінок
+                    // на цьому кроці) — реальні посилання приходять лише як
+                    // url-цитати у фінальному повідомленні цього ж раунду,
+                    // тож дописуємо їх заднім числом в output останнього
+                    // web_search кроку цього раунду.
+                    if ($webSources !== [] && isset($lastWebSearchStepIndex)) {
+                        $toolSteps[$lastWebSearchStepIndex]['output'] = json_encode(
+                            array_map(fn (array $s) => ['url' => $s['url'], 'title' => $s['title']], $webSources),
+                            JSON_UNESCAPED_UNICODE
+                        );
+                    }
                 }
             }
 
