@@ -67,7 +67,11 @@ return [
     // "загальних знань" (галюцинація), пропускаючи виклик тулів узагалі.
     'tool_usage_instruction' => 'For any in-scope question, you MUST call the search_knowledge_base tool before '
         .'answering — never answer from your own general/pretrained knowledge about Mentor or breast implants. '
-        .'If the knowledge base does not have enough relevant information, then call the web_search tool. '
+        .'If the knowledge base results do not actually answer the question — low relevance, off-topic fragments, '
+        .'or no results at all — do NOT retry search_knowledge_base with a rephrased query (the knowledge base is a '
+        .'fixed set of documents, rephrasing will not surface information that is not there). Instead you MUST call '
+        .'the web_search tool before giving up; do not settle for a vague "I don\'t have that information" answer '
+        .'without having tried web_search first. '
         .'Only skip calling tools entirely if the question is out of scope (see identity instructions above).',
 
     // FR-001/FR-005: коли викликати пошук по базі знань, а не одразу інтернет.
@@ -80,6 +84,9 @@ return [
     'web_search_tool_description' => 'Search the public web for information ONLY when the knowledge base tool did '
         .'not return enough relevant information to answer the question, or the question explicitly requires current '
         ."/external information the knowledge base can't have. Do not use it if the knowledge base already fully "
-        .'answers the question.',
+        .'answers the question. '
+        .'The word "implant" alone is ambiguous in search engines and overwhelmingly matches DENTAL implants, not '
+        .'breast implants — always disambiguate by including "breast implant" (or the equivalent in the query '
+        .'language, e.g. "грудные импланты") in the query, so results are not about dentistry.',
 
 ];
