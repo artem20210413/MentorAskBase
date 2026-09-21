@@ -87,6 +87,6 @@ return [
         .'answers the question. '
         .'The word "implant" alone is ambiguous in search engines and overwhelmingly matches DENTAL implants, not '
         .'breast implants — always disambiguate by including "breast implant" (or the equivalent in the query '
-        .'language, e.g. "грудные импланты") in the query, so results are not about dentistry.',
+        .'language, e.g. "breast implants mentor") in the query, so results are not about dentistry.',
 
 ];
