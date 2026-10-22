@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\PhoneLogin;
+use App\Http\Middleware\EnsureAdminSessionIsValid;
+use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -25,9 +28,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            // FR-019: доступ без входу в систему на цьому етапі (тимчасовий
-            // ризик, задокументований у spec.md Assumptions) — авторизація
-            // запланована на майбутній етап.
+            // contracts/web-auth.md: вхід за номером телефону + одноразовим
+            // кодом з бота замість стандартного email+пароль (feature 004).
+            ->login(PhoneLogin::class)
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -51,6 +54,10 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+            ])
+            ->authMiddleware([
+                Authenticate::class,
+                EnsureAdminSessionIsValid::class,
             ]);
     }
 }

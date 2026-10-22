@@ -13,3 +13,6 @@ Schedule::command('rag:purge-deleted-documents')->daily();
 
 // Очищення тимчасових файлів Livewire (форма завантаження в адмінці)
 Schedule::command('rag:purge-livewire-tmp')->daily();
+
+// FR-007: щоденне нагадування про необроблені заявки на апрув
+Schedule::command('telegram:send-approval-reminders')->dailyAt(config('services.telegram.reminder_time'));

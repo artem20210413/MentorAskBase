@@ -2,15 +2,31 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\User;
+use Tests\Support\SeedsRoles;
 use Tests\TestCase;
 
 class DocumentPageAccessTest extends TestCase
 {
-    public function test_documents_page_is_accessible_without_login(): void
+    use SeedsRoles;
+
+    public function test_documents_page_requires_login(): void
     {
-        // FR-019: без будь-якої автентифікації/входу в систему
+        // FR-017 (feature 004): панель більше не доступна без авторизації.
         $response = $this->get('/admin/documents');
 
-        $response->assertOk();
+        $response->assertRedirect();
+        $this->assertGuest();
+    }
+
+    public function test_approved_admin_can_access_documents_page(): void
+    {
+        $this->seedRoles();
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/admin/documents')
+            ->assertOk();
     }
 }

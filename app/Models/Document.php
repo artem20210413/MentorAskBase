@@ -36,6 +36,11 @@ class Document extends Model
         return $this->hasMany(DocumentChunk::class);
     }
 
+    public function summaries(): HasMany
+    {
+        return $this->hasMany(DocumentSummary::class);
+    }
+
     public function duplicateOf(): ?self
     {
         return $this->duplicate_of_document_id

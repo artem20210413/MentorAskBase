@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TelegramWebhookController;
 use App\Livewire\PublicChat;
 use Illuminate\Support\Facades\Route;
 
@@ -13,3 +14,4 @@ Route::get('/', function () {
 Route::get('/chat', PublicChat::class)
     ->middleware('throttle:'.config('rag.rate_limit_per_minute').',1')
     ->name('chat');
+

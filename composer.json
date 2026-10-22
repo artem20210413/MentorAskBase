@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.3",
         "filament/filament": "^3.3",
+        "irazasyed/telegram-bot-sdk": "^3.16",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
@@ -15,7 +16,9 @@
         "patrickschur/language-detection": "^5.3",
         "pgvector/pgvector": "^0.2.2",
         "phpoffice/phpword": "^1.4",
+        "propaganistas/laravel-phone": "^6.1",
         "smalot/pdfparser": "^2.12",
+        "spatie/laravel-permission": "^8.3",
         "spatie/pdf-to-image": "^3.4",
         "theodo-group/llphant": "^1.0"
     },
