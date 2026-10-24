@@ -50,6 +50,10 @@ return [
         'reminder_time' => env('TELEGRAM_REMINDER_TIME', '09:00'),
         // FR-012a: розмір сторінки пагінації списку документів у боті
         'docs_page_size' => (int) env('TELEGRAM_DOCS_PAGE_SIZE', 20),
+        // Окремий чат для технічних помилок webhook — не для модераторів,
+        // лише для розробника/адміна, що стежить за станом бота. Якщо не
+        // задано — помилки лише логуються (без надсилання в Telegram).
+        'error_chat_id' => env('TELEGRAM_ERROR_CHAT_ID'),
     ],
 
 ];

@@ -8,7 +8,7 @@ trait PostsTelegramUpdates
 {
     protected function postTelegramUpdate(array $update): TestResponse
     {
-        return $this->postJson('/telegram/webhook/'.config('services.telegram.webhook_secret'), $update);
+        return $this->postJson('/api/telegram/webhook/'.config('services.telegram.webhook_secret'), $update);
     }
 
     protected function telegramMessage(int $chatId, int $fromId, string $text, ?string $username = null): array

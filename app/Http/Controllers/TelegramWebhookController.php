@@ -39,9 +39,35 @@ class TelegramWebhookController extends Controller
             $this->dispatch($update);
         } catch (Throwable $e) {
             report($e);
+            $this->notifyErrorChat($e);
         }
 
         return response('', 200);
+    }
+
+    /**
+     * Спостережуваність: будь-яка необроблена помилка webhook-обробки одразу
+     * видна в окремому технічному чаті (не в чаті модерації — модераторам це
+     * не потрібно бачити).
+     */
+    private function notifyErrorChat(Throwable $e): void
+    {
+        $errorChatId = config('services.telegram.error_chat_id');
+
+        if (! $errorChatId) {
+            return;
+        }
+
+        $text = '⚠️ ['.config('app.env').'] Помилка в обробці Telegram-webhook'."\n"
+            .get_class($e).': '.$e->getMessage()."\n"
+            .$e->getFile().':'.$e->getLine();
+
+        try {
+            // Telegram обмежує повідомлення 4096 символами.
+            $this->telegram->sendMessage($errorChatId, mb_substr($text, 0, 4000));
+        } catch (Throwable $notifyException) {
+            report($notifyException);
+        }
     }
 
     private function dispatch(Update $update): void

@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\TelegramWebhookController;
 use App\Livewire\PublicChat;
 use Illuminate\Support\Facades\Route;
 
