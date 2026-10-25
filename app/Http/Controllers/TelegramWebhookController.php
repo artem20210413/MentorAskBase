@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TelegramWebhookLog;
 use App\Models\User;
 use App\Services\Telegram\ApprovalRequestService;
 use App\Services\Telegram\BotMenuService;
@@ -33,7 +34,10 @@ class TelegramWebhookController extends Controller
             abort(404);
         }
 
-        $update = new Update($request->json()->all() ?? []);
+        $payload = $request->json()->all() ?? [];
+        $update = new Update($payload);
+
+        $this->logWebhook($update, $payload);
 
         try {
             $this->dispatch($update);
@@ -43,6 +47,20 @@ class TelegramWebhookController extends Controller
         }
 
         return response('', 200);
+    }
+
+    /**
+     * Діагностика: зберігаємо сирий payload кожного валідного запиту, щоб
+     * розбирати, що саме надіслав Telegram. Логування не має права зламати
+     * обробку webhook — будь-яка помилка лише репортиться.
+     */
+    private function logWebhook(Update $update, array $payload): void
+    {
+        try {
+            TelegramWebhookLog::record($update, $payload);
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**
