@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Tests\Support\SeedsRoles;
 use Tests\TestCase;
@@ -14,9 +15,12 @@ class AdminSessionInvalidationTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
-        $loggedInAt = now()->subMinutes(10);
+        // Рядок, не Carbon-об'єкт — у продакшні сесія серіалізується в JSON
+        // (config('session.serialization') === 'json'), тож logged_in_at
+        // реально приходить як рядок, не як Carbon-інстанс.
+        $loggedInAt = now()->subMinutes(10)->toJSON();
         $admin->update(['sessions_invalidated_at' => now()]);
 
         $response = $this
@@ -32,10 +36,10 @@ class AdminSessionInvalidationTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
         $admin->update(['sessions_invalidated_at' => now()->subMinutes(10)]);
 
-        $loggedInAt = now();
+        $loggedInAt = now()->toJSON();
 
         $response = $this
             ->actingAs($admin)

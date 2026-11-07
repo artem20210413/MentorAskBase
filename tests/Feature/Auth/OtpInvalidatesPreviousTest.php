@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
 use App\Models\OneTimeCode;
 use App\Models\User;
 use App\Services\Auth\OneTimeCodeService;
@@ -18,7 +19,7 @@ class OtpInvalidatesPreviousTest extends TestCase
         $this->seedRoles();
 
         $admin = User::factory()->create(['phone' => '+15559990020']);
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         $this->mock(TelegramClient::class, fn ($mock) => $mock->shouldReceive('sendMessage')->twice());
 

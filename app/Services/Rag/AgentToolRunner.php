@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Services\LlmOptions;
 use App\Services\OpenAiRetry;
 use OpenAI\Laravel\Facades\OpenAI;
 use OpenAI\Responses\Responses\Output\OutputFunctionToolCall;
@@ -162,6 +163,7 @@ class AgentToolRunner
             'instructions' => $instructions,
             'tools' => $tools,
             'input' => $input,
+            ...LlmOptions::forResponses(),
         ];
 
         if ($previousResponseId !== null) {
@@ -274,6 +276,7 @@ class AgentToolRunner
             'instructions' => $instructions,
             'tool_choice' => 'none',
             'input' => $input,
+            ...LlmOptions::forResponses(),
         ];
 
         if ($previousResponseId !== null) {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
 use App\Models\OneTimeCode;
 use App\Models\User;
 use App\Services\Auth\OneTimeCodeService;
@@ -17,7 +18,7 @@ class PhoneLoginVerifyTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create(['phone' => '+15559990030']);
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         OneTimeCode::create([
             'user_id' => $admin->id,
@@ -35,7 +36,7 @@ class PhoneLoginVerifyTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create(['phone' => '+15559990031']);
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         OneTimeCode::create([
             'user_id' => $admin->id,
@@ -58,7 +59,7 @@ class PhoneLoginVerifyTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create(['phone' => '+15559990032']);
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         OneTimeCode::create([
             'user_id' => $admin->id,

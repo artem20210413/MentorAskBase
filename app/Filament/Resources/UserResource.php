@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Services\Admin\AdminActionLogger;
@@ -27,7 +28,7 @@ class UserResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return (bool) auth()->user()?->hasRole('super_admin');
+        return (bool) auth()->user()?->hasRole(UserRole::SuperAdmin);
     }
 
     public static function form(Form $form): Form
@@ -65,15 +66,15 @@ class UserResource extends Resource
                     ->form([
                         Select::make('role')
                             ->label('Нова роль')
-                            ->options(['user' => 'user', 'moderator' => 'moderator', 'admin' => 'admin'])
-                            ->default(fn (User $record) => $record->roles->first()?->name ?? 'user')
+                            ->options(UserRole::assignableOptions())
+                            ->default(fn (User $record) => $record->roles->first()?->name ?? UserRole::User->value)
                             ->required(),
                     ])
                     ->action(function (User $record, array $data): void {
                         $actor = auth()->user();
                         $oldRole = $record->roles->first()?->name;
 
-                        $record->syncRoles([$data['role']]);
+                        $record->syncRoles([UserRole::from($data['role'])]);
                         $record->sessions_invalidated_at = now();
                         $record->save();
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Telegram;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\UserApprovalRequest;
 use App\Services\Admin\AdminActionLogger;
@@ -56,7 +57,7 @@ class ApprovalRequestService
         $moderationLocale = config('services.telegram.moderation_language');
         $clicker = User::where('telegram_chat_id', $clickerTelegramId)->first();
 
-        if (! $clicker || ! $clicker->hasAnyRole(['moderator', 'admin', 'super_admin'])) {
+        if (! $clicker || ! $clicker->hasAnyRole([UserRole::Moderator, UserRole::Admin, UserRole::SuperAdmin])) {
             $this->telegram->answerCallbackQuery($callbackQueryId, __('telegram.moderation_unauthorized', [], $moderationLocale));
 
             return ['outcome' => 'unauthorized'];
@@ -87,7 +88,7 @@ class ApprovalRequestService
 
             if ($approved) {
                 $applicant->status = 'approved';
-                $applicant->assignRole('user');
+                $applicant->assignRole(UserRole::User);
             } else {
                 $applicant->status = 'rejected';
                 $applicant->rejection_count += 1;

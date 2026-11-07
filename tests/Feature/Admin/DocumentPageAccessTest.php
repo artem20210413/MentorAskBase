@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Tests\Support\SeedsRoles;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class DocumentPageAccessTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         $this->actingAs($admin)
             ->get('/admin/documents')

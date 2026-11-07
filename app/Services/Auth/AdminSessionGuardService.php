@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Carbon\CarbonInterface;
 
@@ -13,7 +14,7 @@ class AdminSessionGuardService
 {
     public function isValid(User $user, ?CarbonInterface $loggedInAt): bool
     {
-        if ($user->status !== 'approved' || ! $user->hasAnyRole(['admin', 'super_admin'])) {
+        if ($user->status !== 'approved' || ! $user->hasAnyRole([UserRole::Admin, UserRole::SuperAdmin])) {
             return false;
         }
 

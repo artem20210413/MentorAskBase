@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Services\LlmOptions;
 use OpenAI\Laravel\Facades\OpenAI;
 use Throwable;
 
@@ -37,6 +38,7 @@ class QueryRewriter
             $response = OpenAI::chat()->create([
                 'model' => config('rag.openai.chat_model'),
                 'messages' => $messages,
+                ...LlmOptions::forChat(),
             ]);
 
             $rewritten = trim($response->choices[0]->message->content ?? '');

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -47,7 +48,7 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->status === 'approved' && $this->hasAnyRole(['admin', 'super_admin']);
+        return $this->status === 'approved' && $this->hasAnyRole([UserRole::Admin, UserRole::SuperAdmin]);
     }
 
     public function approvalRequests(): HasMany

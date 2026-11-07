@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\UserResource\Pages\ManageUsers;
 use App\Models\User;
 use Livewire\Livewire;
@@ -16,7 +17,7 @@ class SelfProtectionTest extends TestCase
     {
         $this->seedRoles();
         $superAdmin = User::factory()->create();
-        $superAdmin->assignRole('super_admin');
+        $superAdmin->assignRole(UserRole::SuperAdmin);
 
         $this->actingAs($superAdmin);
 
@@ -24,7 +25,7 @@ class SelfProtectionTest extends TestCase
             ->assertTableActionHidden('changeRole', $superAdmin)
             ->assertTableActionHidden('toggleStatus', $superAdmin);
 
-        $this->assertTrue($superAdmin->refresh()->hasRole('super_admin'));
+        $this->assertTrue($superAdmin->refresh()->hasRole(UserRole::SuperAdmin));
         $this->assertSame('approved', $superAdmin->status);
     }
 }

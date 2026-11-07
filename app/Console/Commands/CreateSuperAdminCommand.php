@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
@@ -40,7 +41,7 @@ class CreateSuperAdminCommand extends Command
         $user->status = 'approved';
         $user->language ??= 'uk';
         $user->save();
-        $user->syncRoles(['super_admin']);
+        $user->syncRoles([UserRole::SuperAdmin]);
 
         $this->info("Super admin створено: {$normalized} (user_id={$user->id})");
 

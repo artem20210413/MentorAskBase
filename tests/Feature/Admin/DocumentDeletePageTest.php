@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\DocumentResource\Pages\ManageDocuments;
 use App\Models\Document;
 use App\Models\User;
@@ -17,7 +18,7 @@ class DocumentDeletePageTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
         $this->actingAs($admin);
 
         $document = Document::factory()->create(['status' => 'processed']);

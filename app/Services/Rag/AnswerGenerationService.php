@@ -33,7 +33,9 @@ class AnswerGenerationService
         // питання сесії (без історії) повертається без змін. Модель бачить
         // обидва варіанти — оригінальне питання (для тону) і самодостатнє
         // формулювання (щоб точніше сформувати запит до search_knowledge_base).
-        $retrievalQuestion = $this->queryRewriter->rewriteForRetrieval($question, $history);
+        $retrievalQuestion = config('rag.llm.query_refinement_enabled')
+            ? $this->queryRewriter->rewriteForRetrieval($question, $history)
+            : $question;
 
         $input = [...$history];
 

@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 
 use App\Models\Document;
 use App\Models\DocumentSummary;
+use App\Services\LlmOptions;
 use OpenAI\Laravel\Facades\OpenAI;
 
 /**
@@ -62,6 +63,7 @@ class DocumentSummaryService
                 ],
                 ['role' => 'user', 'content' => $text],
             ],
+            ...LlmOptions::forChat(),
         ]);
 
         return trim($response->choices[0]->message->content ?? '');

@@ -6,6 +6,7 @@ use App\Services\Auth\AdminSessionGuardService;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAdminSessionIsValid
@@ -16,7 +17,12 @@ class EnsureAdminSessionIsValid
     {
         $user = Filament::auth()->user();
 
-        if ($user && ! $this->guard->isValid($user, session('logged_in_at'))) {
+        // config('session.serialization') === 'json' — сесія зберігає
+        // Carbon-значення як рядок (ISO8601), не як об'єкт; парсимо назад тут.
+        $loggedInAt = session('logged_in_at');
+        $loggedInAt = $loggedInAt ? Carbon::parse($loggedInAt) : null;
+
+        if ($user && ! $this->guard->isValid($user, $loggedInAt)) {
             Filament::auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Telegram;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\UserApprovalRequest;
 use App\Services\Telegram\TelegramClient;
@@ -18,7 +19,7 @@ class ApprovalDecisionTest extends TestCase
         $this->seedRoles();
 
         $moderator = User::factory()->create(['telegram_chat_id' => 700]);
-        $moderator->assignRole('moderator');
+        $moderator->assignRole(UserRole::Moderator);
 
         $applicant = User::factory()->pending()->create(['telegram_chat_id' => 701]);
         $request = UserApprovalRequest::create([
@@ -43,7 +44,7 @@ class ApprovalDecisionTest extends TestCase
         $response->assertOk();
 
         $this->assertDatabaseHas('users', ['id' => $applicant->id, 'status' => 'approved']);
-        $this->assertTrue($applicant->refresh()->hasRole('user'));
+        $this->assertTrue($applicant->refresh()->hasRole(UserRole::User));
         $this->assertDatabaseHas('user_approval_requests', ['id' => $request->id, 'status' => 'approved']);
         $this->assertDatabaseHas('admin_action_logs', [
             'actor_user_id' => $moderator->id,
@@ -57,7 +58,7 @@ class ApprovalDecisionTest extends TestCase
         $this->seedRoles();
 
         $moderator = User::factory()->create(['telegram_chat_id' => 710]);
-        $moderator->assignRole('moderator');
+        $moderator->assignRole(UserRole::Moderator);
 
         $applicant = User::factory()->pending()->create(['telegram_chat_id' => 711]);
         $request = UserApprovalRequest::create([

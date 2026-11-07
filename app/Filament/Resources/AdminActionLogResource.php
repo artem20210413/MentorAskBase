@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\AdminActionLogResource\Pages;
 use App\Models\AdminActionLog;
 use Filament\Forms\Form;
@@ -24,7 +25,7 @@ class AdminActionLogResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return (bool) auth()->user()?->hasRole('super_admin');
+        return (bool) auth()->user()?->hasRole(UserRole::SuperAdmin);
     }
 
     public static function form(Form $form): Form

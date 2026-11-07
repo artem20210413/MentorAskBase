@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\DocumentResource\Pages\ManageDocuments;
 use App\Jobs\ProcessDocumentJob;
 use App\Models\User;
@@ -21,7 +22,7 @@ class DocumentUploadPageTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
         $this->actingAs($admin);
 
         Storage::fake('public');

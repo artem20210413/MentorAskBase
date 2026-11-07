@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\UserResource\Pages\ManageUsers;
 use App\Models\User;
 use Livewire\Livewire;
@@ -16,10 +17,10 @@ class UserRoleChangeTest extends TestCase
     {
         $this->seedRoles();
         $superAdmin = User::factory()->create();
-        $superAdmin->assignRole('super_admin');
+        $superAdmin->assignRole(UserRole::SuperAdmin);
 
         $target = User::factory()->create(['sessions_invalidated_at' => null]);
-        $target->assignRole('moderator');
+        $target->assignRole(UserRole::Moderator);
 
         $this->actingAs($superAdmin);
 
@@ -27,8 +28,8 @@ class UserRoleChangeTest extends TestCase
             ->callTableAction('changeRole', $target, data: ['role' => 'admin']);
 
         $target->refresh();
-        $this->assertTrue($target->hasRole('admin'));
-        $this->assertFalse($target->hasRole('moderator'));
+        $this->assertTrue($target->hasRole(UserRole::Admin));
+        $this->assertFalse($target->hasRole(UserRole::Moderator));
         $this->assertNotNull($target->sessions_invalidated_at);
 
         $this->assertDatabaseHas('admin_action_logs', [
@@ -42,10 +43,10 @@ class UserRoleChangeTest extends TestCase
     {
         $this->seedRoles();
         $superAdmin = User::factory()->create();
-        $superAdmin->assignRole('super_admin');
+        $superAdmin->assignRole(UserRole::SuperAdmin);
 
         $target = User::factory()->create(['status' => 'approved']);
-        $target->assignRole('user');
+        $target->assignRole(UserRole::User);
 
         $this->actingAs($superAdmin);
 

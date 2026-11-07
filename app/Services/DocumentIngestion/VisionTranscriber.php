@@ -2,6 +2,7 @@
 
 namespace App\Services\DocumentIngestion;
 
+use App\Services\LlmOptions;
 use App\Services\OpenAiRetry;
 use OpenAI\Laravel\Facades\OpenAI;
 
@@ -45,6 +46,7 @@ class VisionTranscriber
                     ],
                 ],
             ],
+            ...LlmOptions::forChat(),
         ]));
 
         return trim($response->choices[0]->message->content ?? '');

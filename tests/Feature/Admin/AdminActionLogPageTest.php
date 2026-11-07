@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\AdminActionLogResource;
 use App\Models\AdminActionLog;
 use App\Models\User;
@@ -16,7 +17,7 @@ class AdminActionLogPageTest extends TestCase
     {
         $this->seedRoles();
         $superAdmin = User::factory()->create();
-        $superAdmin->assignRole('super_admin');
+        $superAdmin->assignRole(UserRole::SuperAdmin);
 
         $moderator = User::factory()->create();
         $applicant = User::factory()->create();
@@ -30,7 +31,7 @@ class AdminActionLogPageTest extends TestCase
             'actor_user_id' => $superAdmin->id,
             'target_user_id' => $applicant->id,
             'action' => 'role_changed',
-            'metadata' => ['old_role' => 'user', 'new_role' => 'moderator'],
+            'metadata' => ['old_role' => UserRole::User->value, 'new_role' => UserRole::Moderator->value],
         ]);
 
         $response = $this->actingAs($superAdmin)->get(AdminActionLogResource::getUrl());
@@ -44,7 +45,7 @@ class AdminActionLogPageTest extends TestCase
     {
         $this->seedRoles();
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole(UserRole::Admin);
 
         $this->actingAs($admin)
             ->get(AdminActionLogResource::getUrl())

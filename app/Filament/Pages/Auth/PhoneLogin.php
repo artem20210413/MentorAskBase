@@ -46,7 +46,10 @@ class PhoneLogin extends SimplePage implements HasForms
                     ->tel()
                     ->required()
                     ->autofocus()
-                    ->disabled(fn () => $this->step === 'code'),
+                    ->disabled(fn () => $this->step === 'code')
+                    // disabled() вимикає дегідрацію за замовчуванням — без
+                    // цього $data['phone'] зникає з getState() на кроці "код".
+                    ->dehydrated(),
                 TextInput::make('code')
                     ->label('Код з Telegram')
                     ->required()
