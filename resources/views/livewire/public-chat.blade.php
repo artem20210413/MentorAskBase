@@ -55,6 +55,7 @@
                 placeholder="Напишіть питання..."
                 autocomplete="off"
                 class="flex-1 rounded-full border border-neutral-700 bg-neutral-800 px-4 py-2 text-neutral-100 placeholder:text-neutral-500 focus:border-indigo-500 focus:outline-none"
+                maxlength="2000"
                 @disabled($isSending)
             >
             <button
@@ -65,6 +66,9 @@
                 Надіслати
             </button>
         </div>
+        @error('question')
+            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+        @enderror
     </form>
 </div>
 

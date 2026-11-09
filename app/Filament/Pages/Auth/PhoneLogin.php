@@ -12,6 +12,7 @@ use Filament\Forms\Form;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\SimplePage;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 
 /**
  * contracts/web-auth.md: 2-кроковий вхід на Filament-панель — телефон → код.
@@ -26,6 +27,7 @@ class PhoneLogin extends SimplePage implements HasForms
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
+    #[Locked]
     public string $step = 'phone';
 
     public function mount(): void
@@ -72,7 +74,7 @@ class PhoneLogin extends SimplePage implements HasForms
         $data = $this->form->getState();
 
         if ($this->step === 'phone') {
-            $result = $service->requestCode($data['phone']);
+            $result = $service->requestCode($data['phone'], request()->ip());
 
             if ($result['outcome'] === 'rate_limited') {
                 throw ValidationException::withMessages([
@@ -91,7 +93,13 @@ class PhoneLogin extends SimplePage implements HasForms
             return;
         }
 
-        $result = $service->verifyCode($data['phone'], $data['code']);
+        $result = $service->verifyCode($data['phone'], $data['code'], request()->ip());
+
+        if ($result['outcome'] === 'rate_limited') {
+            throw ValidationException::withMessages([
+                'data.code' => 'Забагато спроб. Спробуйте за хвилину.',
+            ]);
+        }
 
         if ($result['outcome'] !== 'success') {
             throw ValidationException::withMessages([

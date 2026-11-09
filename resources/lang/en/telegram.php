@@ -4,6 +4,7 @@ return [
 
     'greeting' => "Hi! 👋 I'm an assistant bot. I can help you find answers in our knowledge base: find the right document, briefly summarize it, or just answer your question in chat.\n\nTo start using the bot, please confirm your phone number — tap the button below. After that our administrators will review your request, and I'll let you know as soon as access is granted.",
     'btn_share_contact' => 'Share contact',
+    'contact_not_own' => 'You can only register your own phone number. Please tap the "Share contact" button below.',
 
     'btn_menu_language' => '🌐 Language',
     'btn_menu_help' => '❓ Help',
@@ -33,6 +34,10 @@ return [
     'access_denied_default' => 'No access.',
 
     'free_chat_error' => 'Sorry, there was a temporary error on our side. Please try again later.',
+    'text_only' => 'I can only read text messages. Please type your question.',
+    'free_chat_rate_limited_minute' => 'Too many questions in a row. Please wait a minute and try again.',
+    'free_chat_rate_limited_day' => 'You have reached today\'s question limit. Please try again tomorrow.',
+    'question_too_long' => 'Your question is too long — :max characters max. Please shorten it.',
 
     'otp_code_message' => 'Your sign-in code: :code',
 

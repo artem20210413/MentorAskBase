@@ -22,13 +22,29 @@ class OnboardingService
         // FR-002: до реєстрації мова ще не вибрана — замовчування 'uk'.
         $locale = 'uk';
 
-        $this->telegram->sendMessage($chatId, __('telegram.greeting', [], $locale), [
+        $this->telegram->sendMessage($chatId, __('telegram.greeting', [], $locale), $this->shareContactKeyboard($locale));
+    }
+
+    /**
+     * Надіслано чужий контакт (або контакт без Telegram-акаунта) — просимо
+     * поділитися саме своїм номером через кнопку.
+     */
+    public function rejectForeignContact(int $chatId): void
+    {
+        $locale = 'uk';
+
+        $this->telegram->sendMessage($chatId, __('telegram.contact_not_own', [], $locale), $this->shareContactKeyboard($locale));
+    }
+
+    private function shareContactKeyboard(string $locale): array
+    {
+        return [
             'keyboard' => [[
                 ['text' => __('telegram.btn_share_contact', [], $locale), 'request_contact' => true],
             ]],
             'resize_keyboard' => true,
             'one_time_keyboard' => true,
-        ]);
+        ];
     }
 
     /**

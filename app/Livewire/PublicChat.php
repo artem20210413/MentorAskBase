@@ -4,10 +4,17 @@ namespace App\Livewire;
 
 use App\Services\Rag\QuestionAnsweringService;
 use App\Services\Rag\RagAnswerGenerationException;
+use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class PublicChat extends Component
 {
+    /**
+     * Locked: клієнт не може підставити довільний session_id і продовжити
+     * чужу розмову (історія сесії потрапляє в контекст LLM).
+     */
+    #[Locked]
     public ?string $sessionId = null;
 
     public string $question = '';
@@ -32,6 +39,20 @@ class PublicChat extends Component
         if ($question === '') {
             return;
         }
+
+        // Та сама межа довжини, що й в API (SubmitQueryRequest) — довгий
+        // текст означає дорогий запит до LLM.
+        $this->validate(['question' => ['required', 'string', 'max:2000']]);
+
+        // Питання йдуть через POST /livewire/update, тож throttle на GET /chat
+        // їх не обмежує — ліміт по IP рахуємо тут, до звернення до LLM.
+        $rateLimitKey = 'public-chat:'.request()->ip();
+        if (RateLimiter::tooManyAttempts($rateLimitKey, (int) config('rag.rate_limit_per_minute'))) {
+            $this->error = 'Забагато запитів. Спробуйте за хвилину.';
+
+            return;
+        }
+        RateLimiter::hit($rateLimitKey, 60);
 
         $this->error = null;
         $this->isSending = true;

@@ -35,7 +35,26 @@ class CreateSuperAdminCommand extends Command
         }
 
         $user = User::firstOrNew(['phone' => $normalized]);
-        $user->name = (string) $this->option('name');
+
+        // Безпека: акаунт з цим номером міг зареєструвати через бот хтось
+        // інший. Коди входу йдуть на його telegram_chat_id, тож мовчки
+        // підвищувати такий акаунт до super_admin не можна.
+        if ($user->exists) {
+            $this->warn('Користувач з цим номером уже існує:');
+            $this->table(['id', 'name', 'status', 'telegram_chat_id', 'telegram_username'], [[
+                $user->id, $user->name, $user->status, $user->telegram_chat_id ?? '—', $user->telegram_username ?? '—',
+            ]]);
+            $this->warn('Коди входу на сайт підуть у Telegram-чат саме цього акаунта.');
+
+            if (! $this->confirm('Підвищити цей акаунт до super admin?')) {
+                $this->error('Скасовано.');
+
+                return self::FAILURE;
+            }
+        } else {
+            $user->name = (string) $this->option('name');
+        }
+
         $user->email ??= $normalized.'@telegram.local';
         $user->password ??= bcrypt(bin2hex(random_bytes(16)));
         $user->status = 'approved';

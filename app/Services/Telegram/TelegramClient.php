@@ -11,6 +11,13 @@ use Telegram\Bot\Objects\Message;
  */
 class TelegramClient
 {
+    /**
+     * Telegram відхиляє повідомлення довші за 4096 символів. Тримаємо запас
+     * (4096 рахується в UTF-16, де емодзі важать 2) — довгий текст (напр.
+     * RAG-відповідь) ріжемо на кілька повідомлень.
+     */
+    private const MESSAGE_LIMIT = 4000;
+
     private Api $api;
 
     public function __construct()
@@ -20,10 +27,22 @@ class TelegramClient
 
     public function sendMessage(int|string $chatId, string $text, ?array $replyMarkup = null): Message
     {
-        return $this->api->sendMessage($this->withMarkup([
-            'chat_id' => $chatId,
-            'text' => $text,
-        ], $replyMarkup));
+        $chunks = $this->splitText($text);
+        $lastIndex = count($chunks) - 1;
+        $message = null;
+
+        foreach ($chunks as $index => $chunk) {
+            // Клавіатуру чіпляємо лише до останнього фрагмента, щоб вона не
+            // дублювалася під кожним шматком розбитого повідомлення.
+            $markup = $index === $lastIndex ? $replyMarkup : null;
+
+            $message = $this->api->sendMessage($this->withMarkup([
+                'chat_id' => $chatId,
+                'text' => $chunk,
+            ], $markup));
+        }
+
+        return $message;
     }
 
     public function editMessageText(int|string $chatId, int $messageId, string $text, ?array $replyMarkup = null): Message
@@ -63,5 +82,45 @@ class TelegramClient
         }
 
         return $params;
+    }
+
+    /**
+     * Ріже текст на фрагменти не довші за MESSAGE_LIMIT, намагаючись
+     * розривати на межі рядка/пробілу, щоб не рвати слова посередині.
+     *
+     * @return array<int, string>
+     */
+    private function splitText(string $text): array
+    {
+        if (mb_strlen($text) <= self::MESSAGE_LIMIT) {
+            return [$text];
+        }
+
+        $chunks = [];
+        $remaining = $text;
+
+        while (mb_strlen($remaining) > self::MESSAGE_LIMIT) {
+            $slice = mb_substr($remaining, 0, self::MESSAGE_LIMIT);
+
+            // Межа розриву: останній перенос рядка, інакше останній пробіл.
+            $breakpoint = max(
+                (int) mb_strrpos($slice, "\n"),
+                (int) mb_strrpos($slice, ' '),
+            );
+
+            // Суцільний текст без пробілів — ріжемо жорстко по ліміту.
+            if ($breakpoint === 0) {
+                $breakpoint = self::MESSAGE_LIMIT;
+            }
+
+            $chunks[] = mb_substr($remaining, 0, $breakpoint);
+            $remaining = ltrim(mb_substr($remaining, $breakpoint));
+        }
+
+        if ($remaining !== '') {
+            $chunks[] = $remaining;
+        }
+
+        return $chunks;
     }
 }

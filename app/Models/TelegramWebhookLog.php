@@ -10,6 +10,10 @@ use Telegram\Bot\Objects\Update;
  * Діагностичний запис вхідного Telegram-webhook — незмінний, лише created_at.
  * За замовчуванням зберігається тиждень, далі видаляється командою
  * telegram:purge-webhook-logs.
+ *
+ * update_id має unique-індекс: запис слугує бар'єром дедуплікації, тож
+ * повторні доставки того самого update_id не логуються вдруге (і не
+ * обробляються — див. TelegramWebhookController::logWebhook).
  */
 #[Fillable(['update_id', 'object_type', 'chat_id', 'payload'])]
 class TelegramWebhookLog extends Model

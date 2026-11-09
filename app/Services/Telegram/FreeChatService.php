@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 
 use App\Models\User;
 use App\Services\Rag\QuestionAnsweringService;
+use Illuminate\Support\Facades\RateLimiter;
 use Throwable;
 
 /**
@@ -18,6 +19,10 @@ class FreeChatService
 
     public function handle(User $user, string $question): void
     {
+        if (! $this->passesLimits($user, $question)) {
+            return;
+        }
+
         try {
             $log = $this->questionAnswering->ask($question, $user->conversation_session_id);
 
@@ -33,5 +38,41 @@ class FreeChatService
                 __('telegram.free_chat_error', [], $user->language),
             );
         }
+    }
+
+    /**
+     * Захист бюджету OpenAI: довжина питання й кількість питань від одного
+     * користувача (за хвилину та за добу). Задовге питання не рахується в
+     * ліміти — користувач лише отримує підказку скоротити його.
+     */
+    private function passesLimits(User $user, string $question): bool
+    {
+        $chatId = (int) $user->telegram_chat_id;
+        $maxLength = (int) config('services.telegram.question_max_length');
+
+        if (mb_strlen($question) > $maxLength) {
+            $this->telegram->sendMessage($chatId, __('telegram.question_too_long', ['max' => $maxLength], $user->language));
+
+            return false;
+        }
+
+        $limits = [
+            ['telegram-free-chat-minute:'.$user->id, (int) config('services.telegram.free_chat_per_minute'), 60, 'telegram.free_chat_rate_limited_minute'],
+            ['telegram-free-chat-day:'.$user->id, (int) config('services.telegram.free_chat_per_day'), 86400, 'telegram.free_chat_rate_limited_day'],
+        ];
+
+        foreach ($limits as [$key, $max, , $messageKey]) {
+            if (RateLimiter::tooManyAttempts($key, $max)) {
+                $this->telegram->sendMessage($chatId, __($messageKey, [], $user->language));
+
+                return false;
+            }
+        }
+
+        foreach ($limits as [$key, , $decaySeconds]) {
+            RateLimiter::hit($key, $decaySeconds);
+        }
+
+        return true;
     }
 }
