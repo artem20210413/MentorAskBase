@@ -14,9 +14,10 @@ use Throwable;
  * contracts/telegram-webhook.md: єдина точка входу webhook.
  * Завжди відповідає 200 — Telegram повторює доставку при інших кодах.
  *
- * Контролер лише перевіряє секрет, дедуплікує й ставить update у чергу —
- * сама обробка відбувається в {@see ProcessTelegramUpdateJob}, щоб довгі
- * виклики OpenAI не тримали відкритим HTTP-запит Telegram.
+ * Контролер лише перевіряє секрет, дедуплікує й передає update в
+ * {@see ProcessTelegramUpdateJob} — у чергу або на виконання після відповіді
+ * (services.telegram.updates_via_queue), щоб довгі виклики OpenAI не
+ * тримали відкритим HTTP-запит Telegram.
  */
 class TelegramWebhookController extends Controller
 {
@@ -36,7 +37,13 @@ class TelegramWebhookController extends Controller
             return response('', 200);
         }
 
-        ProcessTelegramUpdateJob::dispatch($payload);
+        // У режимі без черги обробка йде після відправлення відповіді
+        // (fastcgi_finish_request) — Telegram однаково одразу отримує 200.
+        if (config('services.telegram.updates_via_queue')) {
+            ProcessTelegramUpdateJob::dispatch($payload);
+        } else {
+            ProcessTelegramUpdateJob::dispatchAfterResponse($payload);
+        }
 
         return response('', 200);
     }

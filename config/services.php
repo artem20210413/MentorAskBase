@@ -61,6 +61,11 @@ return [
         // лише для розробника/адміна, що стежить за станом бота. Якщо не
         // задано — помилки лише логуються (без надсилання в Telegram).
         'error_chat_id' => env('TELEGRAM_ERROR_CHAT_ID'),
+        // true — update обробляє воркер черги `telegram` (queue:work);
+        // false — обробка в тому ж PHP-процесі одразу після відповіді 200
+        // Telegram'у (dispatchAfterResponse): без воркера, паралельно в
+        // межах пулу PHP-FPM. Для хостингу без постійного воркера.
+        'updates_via_queue' => (bool) env('TELEGRAM_UPDATES_VIA_QUEUE', false),
         // Захист бюджету OpenAI у вільному чаті бота: ліміт питань на одного
         // користувача та максимальна довжина питання (як в API).
         'free_chat_per_minute' => (int) env('TELEGRAM_FREE_CHAT_PER_MINUTE', 10),

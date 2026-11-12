@@ -39,6 +39,13 @@ class ProcessTelegramUpdateJob implements ShouldQueue
 
     public function handle(TelegramUpdateHandler $handler, TelegramClient $telegram): void
     {
+        // Режим без черги (dispatchAfterResponse) виконується у веб-процесі,
+        // де max_execution_time зазвичай 30–60 с — агентному циклу мало.
+        // У CLI-воркері ліміту й так немає, виклик нешкідливий.
+        if (function_exists('set_time_limit')) {
+            set_time_limit(self::TIMEOUT_SECONDS);
+        }
+
         try {
             $handler->handle(new Update($this->payload));
         } catch (Throwable $e) {
