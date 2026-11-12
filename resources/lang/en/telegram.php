@@ -38,6 +38,13 @@ return [
     'free_chat_rate_limited_minute' => 'Too many questions in a row. Please wait a minute and try again.',
     'free_chat_rate_limited_day' => 'You have reached today\'s question limit. Please try again tomorrow.',
     'question_too_long' => 'Your question is too long — :max characters max. Please shorten it.',
+    'free_chat_busy' => 'Please wait, I am still answering your previous question.',
+    // "Model is thinking" indicator: the placeholder changes at each answer stage
+    'thinking_phrases' => [
+        'thinking' => ['🤔 Thinking…', '🤔 One moment, considering your question…', '💭 Figuring out what exactly you are asking…'],
+        'searching_documents' => ['🔎 Searching the documents…', '📚 Browsing the knowledge base…', '🔎 Checking what the documents say…'],
+        'composing' => ['✍️ Writing the answer…', '✍️ Almost there, writing it up…', '🧩 Putting the answer together…'],
+    ],
 
     'otp_code_message' => 'Your sign-in code: :code',
 

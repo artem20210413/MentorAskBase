@@ -80,6 +80,7 @@ class TelegramUpdateHandler
 
         $chatId = (int) $message->chat->id;
         $telegramUserId = (int) $message->from->id;
+        $languageCode = $message->from->get('language_code');
 
         $contact = $message->get('contact');
         if ($contact) {
@@ -88,7 +89,7 @@ class TelegramUpdateHandler
             // інакше можна закріпити за собою чужий телефон (зокрема номер
             // майбутнього адміна, на який потім підуть коди входу).
             if ((int) $contact->get('user_id') !== $telegramUserId) {
-                $this->onboarding->rejectForeignContact($chatId);
+                $this->onboarding->rejectForeignContact($chatId, $languageCode);
 
                 return;
             }
@@ -98,6 +99,7 @@ class TelegramUpdateHandler
                 $chatId,
                 (string) $contact->phoneNumber,
                 $message->from->username ?? null,
+                $languageCode,
             );
 
             return;
@@ -106,7 +108,7 @@ class TelegramUpdateHandler
         $user = User::where('telegram_chat_id', $telegramUserId)->first();
 
         if (! $user) {
-            $this->onboarding->sendGreeting($chatId);
+            $this->onboarding->sendGreeting($chatId, $languageCode);
 
             return;
         }

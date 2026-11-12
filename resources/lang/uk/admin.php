@@ -1,0 +1,77 @@
+<?php
+
+// Адмін-панель Filament (вхід, документи, користувачі, журнал дій). Мова — APP_LOCALE.
+
+return [
+    'login' => [
+        'title' => 'Вхід',
+        'heading' => 'Вхід за номером телефону',
+        'phone' => 'Номер телефону',
+        'code' => 'Код з Telegram',
+        'request_code' => 'Отримати код',
+        'submit' => 'Увійти',
+        'too_many_attempts' => 'Забагато спроб. Спробуйте за хвилину.',
+        'no_access' => 'Немає доступу.',
+        'invalid_code' => 'Невірний або застарілий код.',
+    ],
+    'documents' => [
+        'model' => 'Документ',
+        'plural' => 'Документи',
+        'name' => 'Назва',
+        'status' => 'Статус',
+        'statuses' => [
+            'pending' => 'Очікує обробки',
+            'processing' => 'Обробляється',
+            'processed' => 'Оброблено',
+            'failed' => 'Помилка обробки',
+            'duplicate' => 'Дублікат',
+        ],
+        'failure_reason' => 'Причина помилки',
+        'uploaded_at' => 'Дата завантаження',
+        'delete' => 'Видалити',
+        'upload' => 'Завантажити документи',
+        'files' => 'Файли (PDF, DOCX, TXT)',
+        'upload_success' => 'Завантажено документів: :count. Обробка йде у фоні.',
+        'upload_failed' => 'Деякі файли не завантажено',
+        'upload_failed_item' => '«:name»: :error',
+    ],
+    'users' => [
+        'model' => 'Користувач',
+        'plural' => 'Користувачі',
+        'phone' => 'Телефон',
+        'name' => 'Ім\'я (з Telegram)',
+        'role' => 'Роль',
+        'status' => 'Статус',
+        'statuses' => [
+            'pending' => 'На розгляді',
+            'approved' => 'Активний',
+            'rejected' => 'Відхилено',
+            'deactivated' => 'Деактивовано',
+        ],
+        'change_role' => 'Змінити роль',
+        'new_role' => 'Нова роль',
+        'activate' => 'Активувати',
+        'deactivate' => 'Деактивувати',
+    ],
+    'roles' => [
+        'user' => 'Користувач',
+        'moderator' => 'Модератор',
+        'admin' => 'Адміністратор',
+        'super_admin' => 'Суперадміністратор',
+    ],
+    'action_log' => [
+        'model' => 'Журнал дій',
+        'plural' => 'Журнал дій',
+        'actor' => 'Хто',
+        'target' => 'Щодо кого',
+        'action' => 'Дія',
+        'created_at' => 'Коли',
+        'actions' => [
+            'approval_approved' => 'Схвалено заявку',
+            'approval_rejected' => 'Відхилено заявку',
+            'role_changed' => 'Змінено роль',
+            'user_deactivated' => 'Деактивовано',
+            'user_activated' => 'Активовано',
+        ],
+    ],
+];

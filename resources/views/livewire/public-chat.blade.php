@@ -1,7 +1,7 @@
 <div class="flex h-screen flex-col bg-neutral-900">
     <header class="border-b border-neutral-800 bg-neutral-900 px-6 py-4">
-        <h1 class="text-lg font-semibold text-neutral-100">Асистент бази знань</h1>
-        <p class="text-sm text-neutral-400">Задайте питання — відповідь формується на основі завантажених документів.</p>
+        <h1 class="text-lg font-semibold text-neutral-100">{{ __('chat.title') }}</h1>
+        <p class="text-sm text-neutral-400">{{ __('chat.subtitle') }}</p>
     </header>
 
     <main class="flex-1 space-y-4 overflow-y-auto px-6 py-6" id="chat-log">
@@ -13,7 +13,7 @@
 
                     @if (! empty($message['sources']))
                         <div class="mt-2 flex flex-wrap gap-x-1 border-t border-white/10 pt-2 text-xs opacity-75">
-                            <span>Джерела:</span>
+                            <span>{{ __('chat.sources') }}</span>
                             @foreach ($message['sources'] as $index => $source)
                                 <a
                                     href="{{ $source['url'] }}"
@@ -28,14 +28,14 @@
             </div>
         @empty
             <div class="flex h-full items-center justify-center text-neutral-500">
-                Поставте перше питання, щоб почати розмову.
+                {{ __('chat.empty') }}
             </div>
         @endforelse
 
         @if ($isSending)
             <div class="flex justify-start">
                 <div class="rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-neutral-400">
-                    Друкує…
+                    {{ __('chat.typing') }}
                 </div>
             </div>
         @endif
@@ -52,7 +52,7 @@
             <input
                 type="text"
                 wire:model="question"
-                placeholder="Напишіть питання..."
+                placeholder="{{ __('chat.placeholder') }}"
                 autocomplete="off"
                 class="flex-1 rounded-full border border-neutral-700 bg-neutral-800 px-4 py-2 text-neutral-100 placeholder:text-neutral-500 focus:border-indigo-500 focus:outline-none"
                 maxlength="2000"
@@ -63,7 +63,7 @@
                 class="rounded-full bg-indigo-600 px-6 py-2 font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
                 @disabled($isSending)
             >
-                Надіслати
+                {{ __('chat.send') }}
             </button>
         </div>
         @error('question')

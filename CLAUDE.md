@@ -25,7 +25,6 @@ Docker via Sail (`compose.yaml`): `laravel.test`, `pgsql` (`pgvector/pgvector:pg
 Local environment notes:
 - Port 80 is often taken by other projects' containers, so `laravel.test` may not start. Run `php artisan` on the host against the dockerized Postgres with `DB_HOST=127.0.0.1` (the `.env` value `pgsql` only resolves inside the docker network).
 - Host PHP lacks `ext-imagick`: use `composer ... --ignore-platform-req=ext-imagick`; `tests/Unit/PdfVisionExtractorTest.php` fails with `Class "Imagick" not found` on the host — environmental, not a regression.
-- `DocumentUploadPageTest::test_uploading_document_via_web_form_creates_pending_document` is a known pre-existing failure.
 
 Project artisan commands:
 - `rag:issue-token {name}` — Sanctum token for an API client
@@ -47,10 +46,18 @@ All LLM generation params go through `App\Services\LlmOptions` from `config/rag.
 
 ### Telegram bot
 - Webhook route lives in `routes/api.php` (`/api/telegram/webhook/{secret}`) to avoid CSRF. `TelegramWebhookController` only checks the secret, dedups by `update_id` (unique constraint on `telegram_webhook_logs`), dispatches `ProcessTelegramUpdateJob` to the `telegram` queue and always returns 200 (Telegram retries otherwise). The job calls `TelegramUpdateHandler`, which routes `callback_query`/`message` to services in `app/Services/Telegram` and reports errors to the error chat. No retries (`tries = 1`) to avoid double answers.
+- Free chat (`FreeChatService`): length check → per-user `Cache::lock` (one question at a time, busy reply otherwise) → per-minute/per-day `RateLimiter` limits → placeholder message with a random `telegram.thinking_phrases` phrase, edited on each `AgentToolRunner` stage via the `onProgress` callback (threaded through `QuestionAnsweringService::ask()`), finally replaced with the answer (or deleted + `sendMessage` if longer than `TelegramClient::MESSAGE_LIMIT`). Progress-indicator Telegram failures are reported but never break the answer.
 - Contacts are accepted only if `contact.user_id === from.id` (own number); `telegram:create-super-admin` asks for confirmation before promoting an existing account.
 - `TelegramClient` is a thin own wrapper over `irazasyed/telegram-bot-sdk`; it reads config only from `config('services.telegram.*')` (not the package's `config/telegram.php`). Tests mock `TelegramClient`.
 - Onboarding requires moderator approval: request cards go to one shared moderation group chat (`TELEGRAM_MODERATION_CHAT_ID`), always in `TELEGRAM_MODERATION_LANGUAGE`. Webhook errors go to a separate `TELEGRAM_ERROR_CHAT_ID` — keep error and business notifications in different chats.
 - User-facing bot texts are translated in `resources/lang/{uk,ru,en}/telegram.php`, chosen by `users.language`.
+
+### Localization
+- Translations live in `resources/lang/{uk,ru,en}/*.php`; `tests/Unit/TranslationsParityTest.php` enforces identical keys and `:placeholders` across the three locales — add every new key to all three.
+- Telegram bot: always pass the locale explicitly — `__('telegram.*', [], $user->language)`; moderation chat uses `services.telegram.moderation_language`; before registration the locale comes from `from.language_code` (`OnboardingService::localeFor`, fallback `uk`).
+- Web chat, Filament admin, API messages and document-processing errors (`chat.php`, `admin.php`, `api.php`, `documents.php`) use `APP_LOCALE` (default `uk`). `failure_reason` is stored in the locale active at processing time.
+- RAG "no info" answer (`answers.php`) is in the question's detected language.
+- LLM prompts (`resources/lang/en/bot.php`) are English-only and always requested with explicit `'en'` locale.
 
 ### Auth & admin
 - API: Sanctum tokens + `throttle:rag-api` limiter (registered in `AppServiceProvider::boot`, not in routing callbacks, so it survives `route:cache`). API errors always render JSON (`bootstrap/app.php`).

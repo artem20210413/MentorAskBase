@@ -7,7 +7,7 @@ use App\Models\QueryLog;
 use App\Models\User;
 use App\Services\Rag\QuestionAnsweringService;
 use App\Services\Telegram\TelegramClient;
-use Telegram\Bot\Objects\Message;
+use Tests\Support\FakeTelegramClient;
 use Tests\Support\PostsTelegramUpdates;
 use Tests\TestCase;
 
@@ -32,7 +32,7 @@ class FreeChatLimitsTest extends TestCase
             $this->postTelegramUpdate($this->telegramMessage(960, 960, $question))->assertOk();
         }
 
-        $this->assertSame(__('telegram.free_chat_rate_limited_minute', [], 'uk'), end($sent->messages));
+        $this->assertSame(__('telegram.free_chat_rate_limited_minute', [], 'uk'), last($sent->texts()));
     }
 
     public function test_questions_over_daily_limit_are_not_sent_to_llm(): void
@@ -48,7 +48,7 @@ class FreeChatLimitsTest extends TestCase
             $this->postTelegramUpdate($this->telegramMessage(961, 961, $question))->assertOk();
         }
 
-        $this->assertSame(__('telegram.free_chat_rate_limited_day', [], 'en'), end($sent->messages));
+        $this->assertSame(__('telegram.free_chat_rate_limited_day', [], 'en'), last($sent->texts()));
     }
 
     public function test_limits_are_counted_per_user(): void
@@ -74,7 +74,7 @@ class FreeChatLimitsTest extends TestCase
         $sent = $this->captureSentMessages();
 
         $this->postTelegramUpdate($this->telegramMessage(964, 964, str_repeat('а', 2001)))->assertOk();
-        $this->assertSame(__('telegram.question_too_long', ['max' => 2000], 'uk'), end($sent->messages));
+        $this->assertSame(__('telegram.question_too_long', ['max' => 2000], 'uk'), last($sent->texts()));
 
         // Задовге питання не з'їло хвилинний ліміт (1) — наступне проходить
         $this->postTelegramUpdate($this->telegramMessage(964, 964, 'Нормальне питання'))->assertOk();
@@ -92,20 +92,10 @@ class FreeChatLimitsTest extends TestCase
         });
     }
 
-    private function captureSentMessages(): object
+    private function captureSentMessages(): FakeTelegramClient
     {
-        $sent = new class
-        {
-            public array $messages = [];
-        };
-
-        $this->mock(TelegramClient::class, function ($mock) use ($sent) {
-            $mock->shouldReceive('sendMessage')->andReturnUsing(function ($chatId, string $text) use ($sent) {
-                $sent->messages[] = $text;
-
-                return new Message([]);
-            });
-        });
+        $sent = new FakeTelegramClient;
+        $this->app->instance(TelegramClient::class, $sent);
 
         return $sent;
     }

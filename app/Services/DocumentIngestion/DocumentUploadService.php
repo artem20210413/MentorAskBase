@@ -60,11 +60,10 @@ class DocumentUploadService
                 $documentId = (string) Str::uuid();
                 $safeName = $this->sanitizeFilename($file->getClientOriginalName());
 
-                $storagePath = Storage::disk(config('rag.document_disk'))
-                    ->putFileAs("documents/{$documentId}", $file, $safeName);
+                $storagePath = $this->store($file, "documents/{$documentId}", $safeName);
 
                 if ($storagePath === false) {
-                    throw new RuntimeException('Не вдалося зберегти файл документа.');
+                    throw new RuntimeException(__('documents.store_failed'));
                 }
 
                 return Document::create([
@@ -86,14 +85,37 @@ class DocumentUploadService
     }
 
     /**
+     * .txt зберігається перекодованим у UTF-8 з BOM: пряме посилання на
+     * джерело (FR-009d) віддається як text/plain без charset, і без BOM
+     * браузери часто вгадують кодування неправильно ("кракозябри").
+     * Решта форматів — як є. Хеш дедуплікації рахується до цього, з оригіналу.
+     */
+    private function store(UploadedFile $file, string $directory, string $name): string|false
+    {
+        $disk = Storage::disk(config('rag.document_disk'));
+
+        if ($this->extension($file) !== 'txt') {
+            return $disk->putFileAs($directory, $file, $name);
+        }
+
+        $utf8 = $this->textFileExtractor->toUtf8((string) file_get_contents($file->getRealPath()));
+        $path = "{$directory}/{$name}";
+
+        return $disk->put($path, "\xEF\xBB\xBF".$utf8) ? $path : false;
+    }
+
+    private function extension(UploadedFile $file): string
+    {
+        return strtolower($file->getClientOriginalExtension());
+    }
+
+    /**
      * FR-003: делегує синхронну перевірку цілісності/формату відповідному
      * екстрактору залежно від розширення файлу.
      */
     private function assertReadable(UploadedFile $file): void
     {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        match ($extension) {
+        match ($this->extension($file)) {
             'docx' => $this->wordTextExtractor->assertReadable($file->getRealPath()),
             'txt' => $this->textFileExtractor->assertReadable($file->getRealPath()),
             default => $this->textExtractor->assertReadable($file->getRealPath()),

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 class BotMenuService
 {
     /** @var array<string, string> label (рідною мовою, завжди незмінний) => locale */
-    private const LANGUAGES = [
+    public const LANGUAGES = [
         'Українська' => 'uk',
         'Русский' => 'ru',
         'English' => 'en',

@@ -11,7 +11,7 @@ trait PostsTelegramUpdates
         return $this->postJson('/api/telegram/webhook/'.config('services.telegram.webhook_secret'), $update);
     }
 
-    protected function telegramMessage(int $chatId, int $fromId, string $text, ?string $username = null): array
+    protected function telegramMessage(int $chatId, int $fromId, string $text, ?string $username = null, ?string $languageCode = null): array
     {
         return [
             'update_id' => random_int(1, 1_000_000),
@@ -19,13 +19,13 @@ trait PostsTelegramUpdates
                 'message_id' => random_int(1, 1_000_000),
                 'date' => time(),
                 'chat' => ['id' => $chatId, 'type' => 'private'],
-                'from' => ['id' => $fromId, 'is_bot' => false, 'first_name' => 'Test', 'username' => $username],
+                'from' => array_filter(['id' => $fromId, 'is_bot' => false, 'first_name' => 'Test', 'username' => $username, 'language_code' => $languageCode], fn ($v) => $v !== null),
                 'text' => $text,
             ],
         ];
     }
 
-    protected function telegramContact(int $chatId, int $fromId, string $phone, ?string $username = null): array
+    protected function telegramContact(int $chatId, int $fromId, string $phone, ?string $username = null, ?string $languageCode = null): array
     {
         return [
             'update_id' => random_int(1, 1_000_000),
@@ -33,7 +33,7 @@ trait PostsTelegramUpdates
                 'message_id' => random_int(1, 1_000_000),
                 'date' => time(),
                 'chat' => ['id' => $chatId, 'type' => 'private'],
-                'from' => ['id' => $fromId, 'is_bot' => false, 'first_name' => 'Test', 'username' => $username],
+                'from' => array_filter(['id' => $fromId, 'is_bot' => false, 'first_name' => 'Test', 'username' => $username, 'language_code' => $languageCode], fn ($v) => $v !== null),
                 'contact' => ['phone_number' => $phone, 'first_name' => 'Test', 'user_id' => $fromId],
             ],
         ];

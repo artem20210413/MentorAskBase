@@ -37,7 +37,7 @@ class PublicChatAbuseProtectionTest extends TestCase
             ->set('question', 'Питання 2')->call('ask')
             ->set('question', 'Питання 3')->call('ask');
 
-        $component->assertSet('error', 'Забагато запитів. Спробуйте за хвилину.');
+        $component->assertSet('error', __('chat.rate_limited'));
         $this->assertDatabaseCount('query_logs', 2);
     }
 

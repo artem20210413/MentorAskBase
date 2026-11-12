@@ -3,17 +3,16 @@
 namespace App\Services\Rag;
 
 use App\Services\Conversation\LanguageDetectionService;
+use Illuminate\Support\Facades\Lang;
 use Throwable;
 
 class AnswerGenerationService
 {
     public function __construct(
         private readonly LanguageDetectionService $languageDetectionService,
-        private readonly QueryRewriter            $queryRewriter,
-        private readonly AgentToolRunner          $agentToolRunner,
-    )
-    {
-    }
+        private readonly QueryRewriter $queryRewriter,
+        private readonly AgentToolRunner $agentToolRunner,
+    ) {}
 
     /**
      * FR-001/FR-002/FR-004/FR-005/FR-006/FR-007/FR-008: формує відповідь
@@ -21,10 +20,11 @@ class AnswerGenerationService
      * чи звертатися до бази знань і/або інтернету, замість фіксованого
      * "завжди спершу RAG".
      *
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @param  (callable(string): void)|null  $onProgress  див. AgentToolRunner::run()
      * @return array{answer: string, language: string, sources: array<int, array<string, mixed>>, match_score: ?int, input_tokens: ?int, output_tokens: ?int, tool_steps: array<int, array<string, mixed>>}
      */
-    public function answer(string $question, array $history = []): array
+    public function answer(string $question, array $history = [], ?callable $onProgress = null): array
     {
         $detectedLanguage = $this->languageDetectionService->detect($question);
 
@@ -50,14 +50,14 @@ class AnswerGenerationService
 
         $instructions = $this->buildInstructions($detectedLanguage);
 
-        [$result, $succeeded] = $this->runWithSingleRetry($instructions, $input);
+        [$result, $succeeded] = $this->runWithSingleRetry($instructions, $input, $onProgress);
 
-        if (!$succeeded) {
-            throw new RagAnswerGenerationException('Зовнішній сервіс мовної моделі недоступний після повторної спроби.');
+        if (! $succeeded) {
+            throw new RagAnswerGenerationException(__('api.llm_unavailable'));
         }
 
         $answer = $result['answer'];
-        $noInfoMarker = __('bot.no_relevant_info_marker');
+        $noInfoMarker = __('bot.no_relevant_info_marker', [], 'en');
         $isNoInfo = $answer === '' || str_contains($answer, $noInfoMarker);
 
         return [
@@ -75,14 +75,14 @@ class AnswerGenerationService
      * Найвищий відсоток релевантності серед джерел-документів, використаних
      * у відповіді (null, якщо жодного документа не було використано).
      *
-     * @param array<int, array<string, mixed>> $sources
+     * @param  array<int, array<string, mixed>>  $sources
      */
     private function matchScore(array $sources): ?int
     {
         $relevances = array_filter(array_map(
-            fn(array $s) => $s['type'] === 'document' ? $s['relevance'] : null,
+            fn (array $s) => $s['type'] === 'document' ? $s['relevance'] : null,
             $sources
-        ), fn($r) => $r !== null);
+        ), fn ($r) => $r !== null);
 
         return $relevances === [] ? null : max($relevances);
     }
@@ -90,12 +90,12 @@ class AnswerGenerationService
     private function buildInstructions(string $language): string
     {
         $parts = [
-            __('bot.system_identity'),
-            __('bot.answer_style'),
-            __('bot.medical_disclaimer_instruction'),
-            __('bot.tool_usage_instruction'),
+            __('bot.system_identity', [], 'en'),
+            __('bot.answer_style', [], 'en'),
+            __('bot.medical_disclaimer_instruction', [], 'en'),
+            __('bot.tool_usage_instruction', [], 'en'),
             "Answer in the language with code \"{$language}\".",
-            'If, after using the available tools, no source actually contains the answer, return the string ' . __('bot.no_relevant_info_marker') . ' and nothing else.',
+            'If, after using the available tools, no source actually contains the answer, return the string '.__('bot.no_relevant_info_marker', [], 'en').' and nothing else.',
         ];
 
         return implode("\n\n", $parts);
@@ -104,14 +104,14 @@ class AnswerGenerationService
     /**
      * FR-009c: рівно одна автоматична повторна спроба при збої LLM.
      *
-     * @param array<int, mixed> $input
+     * @param  array<int, mixed>  $input
      * @return array{0: ?array<string, mixed>, 1: bool}
      */
-    private function runWithSingleRetry(string $instructions, array $input): array
+    private function runWithSingleRetry(string $instructions, array $input, ?callable $onProgress = null): array
     {
         for ($attempt = 0; $attempt < 2; $attempt++) {
             try {
-                return [$this->agentToolRunner->run($instructions, $input), true];
+                return [$this->agentToolRunner->run($instructions, $input, $onProgress), true];
             } catch (Throwable $e) {
                 if ($attempt === 1) {
                     return [null, false];
@@ -127,11 +127,10 @@ class AnswerGenerationService
         // FR-009b: якщо для мови немає готового тексту, фолбек на мову за
         // замовчуванням (перший елемент rag.supported_languages), а не на
         // жорстко зашиту англійську.
-        return match ($language) {
-            'uk' => 'Хм, у мене немає точної інформації з цього приводу в наявних документах. Спробуйте перефразувати питання або запитати про щось інше?',
-            'ru' => 'Хм, у меня нет точной информации по этому поводу в имеющихся документах. Попробуйте перефразировать вопрос или спросить о чём-то другом?',
-            'en' => "Hmm, I don't have solid information on that in the documents I have. Feel free to rephrase or ask something else!",
-            default => $this->noInfoAnswer(config('rag.supported_languages')[0]),
-        };
+        $locale = Lang::hasForLocale('answers.no_relevant_info', $language)
+            ? $language
+            : config('rag.supported_languages')[0];
+
+        return __('answers.no_relevant_info', [], $locale);
     }
 }

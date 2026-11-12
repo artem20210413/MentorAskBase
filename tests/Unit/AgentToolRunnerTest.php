@@ -50,6 +50,28 @@ class AgentToolRunnerTest extends TestCase
         $this->assertNotNull($result['tool_steps'][0]['output']);
     }
 
+    public function test_run_reports_progress_stages_between_agent_steps(): void
+    {
+        $dimensions = config('rag.openai.embedding_dimensions', 1536);
+
+        OpenAI::fake([
+            $this->fakeFunctionToolCall('call_1', KnowledgeBaseSearchTool::NAME, ['query' => 'Питання?']),
+            EmbeddingsCreateResponse::fake(['data' => [['embedding' => array_fill(0, $dimensions, 0.1)]]]),
+            $this->fakeFinalAnswer('Ось відповідь.'),
+        ]);
+
+        $stages = [];
+        $this->runner()->run(
+            'Instructions.',
+            [['role' => 'user', 'content' => 'Питання?']],
+            function (string $stage) use (&$stages) {
+                $stages[] = $stage;
+            },
+        );
+
+        $this->assertSame([AgentToolRunner::STAGE_SEARCHING_DOCUMENTS, AgentToolRunner::STAGE_COMPOSING], $stages);
+    }
+
     public function test_run_returns_web_sources_from_url_citations(): void
     {
         OpenAI::fake([

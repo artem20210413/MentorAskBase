@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Enums\UserRole;
+use App\Filament\Concerns\TranslatesStates;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Services\Admin\AdminActionLogger;
@@ -18,13 +19,21 @@ use Filament\Tables\Table;
  */
 class UserResource extends Resource
 {
+    use TranslatesStates;
+
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $modelLabel = 'Користувач';
+    public static function getModelLabel(): string
+    {
+        return __('admin.users.model');
+    }
 
-    protected static ?string $pluralModelLabel = 'Користувачі';
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.users.plural');
+    }
 
     public static function canViewAny(): bool
     {
@@ -40,19 +49,16 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('phone')->label('Телефон')->searchable(),
-                TextColumn::make('name')->label("Ім'я (з Telegram)")->searchable(),
-                TextColumn::make('roles.name')->label('Роль')->badge(),
-                TextColumn::make('status')
-                    ->label('Статус')
+                TextColumn::make('phone')->label(__('admin.users.phone'))->searchable(),
+                TextColumn::make('name')->label(__('admin.users.name'))->searchable(),
+                TextColumn::make('roles.name')
+                    ->label(__('admin.users.role'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending' => 'На розгляді',
-                        'approved' => 'Активний',
-                        'rejected' => 'Відхилено',
-                        'deactivated' => 'Деактивовано',
-                        default => $state,
-                    })
+                    ->formatStateUsing(fn (string $state): string => self::translateOrRaw("admin.roles.{$state}", $state)),
+                TextColumn::make('status')
+                    ->label(__('admin.users.status'))
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => self::translateOrRaw("admin.users.statuses.{$state}", $state))
                     ->color(fn (string $state): string => match ($state) {
                         'approved' => 'success',
                         'deactivated' => 'danger',
@@ -61,11 +67,11 @@ class UserResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('changeRole')
-                    ->label('Змінити роль')
+                    ->label(__('admin.users.change_role'))
                     ->visible(fn (User $record): bool => $record->id !== auth()->id())
                     ->form([
                         Select::make('role')
-                            ->label('Нова роль')
+                            ->label(__('admin.users.new_role'))
                             ->options(UserRole::assignableOptions())
                             ->default(fn (User $record) => $record->roles->first()?->name ?? UserRole::User->value)
                             ->required(),
@@ -84,7 +90,7 @@ class UserResource extends Resource
                         ]);
                     }),
                 Tables\Actions\Action::make('toggleStatus')
-                    ->label(fn (User $record): string => $record->status === 'deactivated' ? 'Активувати' : 'Деактивувати')
+                    ->label(fn (User $record): string => $record->status === 'deactivated' ? __('admin.users.activate') : __('admin.users.deactivate'))
                     ->color(fn (User $record): string => $record->status === 'deactivated' ? 'success' : 'danger')
                     ->requiresConfirmation()
                     ->visible(fn (User $record): bool => $record->id !== auth()->id() && in_array($record->status, ['approved', 'deactivated'], true))

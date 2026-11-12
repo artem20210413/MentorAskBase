@@ -21,15 +21,17 @@ class QuestionAnsweringService
     ) {}
 
     /**
+     * @param  (callable(string): void)|null  $onProgress  етапи агентного циклу (AgentToolRunner::STAGE_*) — для індикатора прогресу в каналі
+     *
      * @throws RagAnswerGenerationException якщо LLM недоступна після повторної спроби (FR-009c)
      */
-    public function ask(string $question, ?string $sessionId = null): QueryLog
+    public function ask(string $question, ?string $sessionId = null, ?callable $onProgress = null): QueryLog
     {
         // FR-011a: невідома/прострочена сесія — автоматично нова, без помилки
         $session = $this->sessionService->resolve($sessionId);
         $history = $this->sessionService->historyFor($session);
 
-        $result = $this->answerGenerationService->answer($question, $history);
+        $result = $this->answerGenerationService->answer($question, $history, $onProgress);
 
         $log = QueryLog::create([
             'conversation_session_id' => $session->id,

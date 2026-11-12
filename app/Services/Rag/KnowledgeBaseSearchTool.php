@@ -24,7 +24,7 @@ class KnowledgeBaseSearchTool
         return [
             'type' => 'function',
             'name' => self::NAME,
-            'description' => __('bot.knowledge_base_tool_description'),
+            'description' => __('bot.knowledge_base_tool_description', [], 'en'),
             'parameters' => [
                 'type' => 'object',
                 'properties' => [

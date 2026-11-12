@@ -22,10 +22,13 @@ enum UserRole: string
      */
     public static function assignableOptions(): array
     {
-        return [
-            self::User->value => self::User->value,
-            self::Moderator->value => self::Moderator->value,
-            self::Admin->value => self::Admin->value,
-        ];
+        return collect([self::User, self::Moderator, self::Admin])
+            ->mapWithKeys(fn (self $role) => [$role->value => $role->label()])
+            ->all();
+    }
+
+    public function label(): string
+    {
+        return __("admin.roles.{$this->value}");
     }
 }

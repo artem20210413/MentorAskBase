@@ -5,6 +5,7 @@ namespace App\Services\Rag;
 use App\Services\LlmOptions;
 use App\Services\OpenAiRetry;
 use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Responses\Responses\CreateResponse;
 use OpenAI\Responses\Responses\Output\OutputFunctionToolCall;
 use OpenAI\Responses\Responses\Output\OutputMessage;
 use OpenAI\Responses\Responses\Output\OutputMessageContentOutputText;
@@ -14,6 +15,14 @@ use Throwable;
 
 class AgentToolRunner
 {
+    /**
+     * Етапи агентного циклу, про які повідомляє колбек onProgress у run()
+     * (напр. для індикатора "модель думає" в Telegram-боті).
+     */
+    public const STAGE_SEARCHING_DOCUMENTS = 'searching_documents';
+
+    public const STAGE_COMPOSING = 'composing';
+
     public function __construct(private readonly KnowledgeBaseSearchTool $knowledgeBaseSearchTool) {}
 
     /**
@@ -25,9 +34,10 @@ class AgentToolRunner
      * `config('rag.agent.max_tool_steps')` кроків.
      *
      * @param  array<int, array{role: string, content: string}>  $input  початкова розмова (історія + поточне питання)
+     * @param  (callable(string): void)|null  $onProgress  викликається з self::STAGE_* при переході агента до нового етапу
      * @return array{answer: string, sources: array<int, array<string, mixed>>, tool_steps: array<int, array{step_number: int, tool: string, input: string, output: ?string}>, input_tokens: ?int, output_tokens: ?int}
      */
-    public function run(string $instructions, array $input): array
+    public function run(string $instructions, array $input, ?callable $onProgress = null): array
     {
         $maxSteps = (int) config('rag.agent.max_tool_steps');
         $tools = [$this->knowledgeBaseSearchTool->schema(), $this->webSearchToolDefinition()];
@@ -42,6 +52,12 @@ class AgentToolRunner
         $outputTokens = null;
 
         for ($round = 0; $round < $maxSteps; $round++) {
+            // Наступні раунди — модель уже має результати інструментів і
+            // формує (або уточнює) відповідь.
+            if ($round > 0 && $onProgress !== null) {
+                $onProgress(self::STAGE_COMPOSING);
+            }
+
             try {
                 $response = $this->call($instructions, $tools, $nextInput, $previousResponseId);
             } catch (Throwable $e) {
@@ -109,6 +125,10 @@ class AgentToolRunner
 
             $nextInput = [];
 
+            if ($onProgress !== null) {
+                $onProgress(self::STAGE_SEARCHING_DOCUMENTS);
+            }
+
             foreach ($functionCalls as $call) {
                 $step = $this->executeFunctionCall($call, $stepNumber);
                 $stepNumber++;
@@ -156,7 +176,7 @@ class AgentToolRunner
      * @param  array<int, array<string, mixed>>  $tools
      * @param  array<int, mixed>  $input
      */
-    private function call(string $instructions, array $tools, array $input, ?string $previousResponseId): \OpenAI\Responses\Responses\CreateResponse
+    private function call(string $instructions, array $tools, array $input, ?string $previousResponseId): CreateResponse
     {
         $params = [
             'model' => config('rag.openai.chat_model'),

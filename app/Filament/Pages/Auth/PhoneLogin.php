@@ -44,7 +44,7 @@ class PhoneLogin extends SimplePage implements HasForms
         return $form
             ->schema([
                 TextInput::make('phone')
-                    ->label('Номер телефону')
+                    ->label(__('admin.login.phone'))
                     ->tel()
                     ->required()
                     ->autofocus()
@@ -53,7 +53,7 @@ class PhoneLogin extends SimplePage implements HasForms
                     // цього $data['phone'] зникає з getState() на кроці "код".
                     ->dehydrated(),
                 TextInput::make('code')
-                    ->label('Код з Telegram')
+                    ->label(__('admin.login.code'))
                     ->required()
                     ->visible(fn () => $this->step === 'code'),
             ])
@@ -64,7 +64,7 @@ class PhoneLogin extends SimplePage implements HasForms
     {
         return [
             Action::make('submit')
-                ->label($this->step === 'phone' ? 'Отримати код' : 'Увійти')
+                ->label($this->step === 'phone' ? __('admin.login.request_code') : __('admin.login.submit'))
                 ->submit('submit'),
         ];
     }
@@ -78,13 +78,13 @@ class PhoneLogin extends SimplePage implements HasForms
 
             if ($result['outcome'] === 'rate_limited') {
                 throw ValidationException::withMessages([
-                    'data.phone' => 'Забагато спроб. Спробуйте за хвилину.',
+                    'data.phone' => __('admin.login.too_many_attempts'),
                 ]);
             }
 
             if ($result['outcome'] === 'denied') {
                 throw ValidationException::withMessages([
-                    'data.phone' => 'Немає доступу.',
+                    'data.phone' => __('admin.login.no_access'),
                 ]);
             }
 
@@ -97,13 +97,13 @@ class PhoneLogin extends SimplePage implements HasForms
 
         if ($result['outcome'] === 'rate_limited') {
             throw ValidationException::withMessages([
-                'data.code' => 'Забагато спроб. Спробуйте за хвилину.',
+                'data.code' => __('admin.login.too_many_attempts'),
             ]);
         }
 
         if ($result['outcome'] !== 'success') {
             throw ValidationException::withMessages([
-                'data.code' => 'Невірний або застарілий код.',
+                'data.code' => __('admin.login.invalid_code'),
             ]);
         }
 
@@ -116,12 +116,12 @@ class PhoneLogin extends SimplePage implements HasForms
 
     public function getTitle(): string
     {
-        return 'Вхід';
+        return __('admin.login.title');
     }
 
     public function getHeading(): string
     {
-        return 'Вхід за номером телефону';
+        return __('admin.login.heading');
     }
 
     protected function hasFullWidthFormActions(): bool

@@ -15,7 +15,7 @@ class FeedbackController extends Controller
         $log = QueryLog::find($queryLogId);
 
         if (! $log) {
-            return response()->json(['message' => 'Запис журналу не знайдено.'], 404);
+            return response()->json(['message' => __('api.query_log_not_found')], 404);
         }
 
         // FR-010c: повторна оцінка замінює попередню (не створює дублікат)

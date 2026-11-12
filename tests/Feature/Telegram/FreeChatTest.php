@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Rag\QuestionAnsweringService;
 use App\Services\Rag\RagAnswerGenerationException;
 use App\Services\Telegram\TelegramClient;
+use Tests\Support\FakeTelegramClient;
 use Tests\Support\PostsTelegramUpdates;
 use Tests\TestCase;
 
@@ -30,13 +31,14 @@ class FreeChatTest extends TestCase
                 ]));
         });
 
-        $this->mock(TelegramClient::class, function ($mock) {
-            $mock->shouldReceive('sendMessage')
-                ->once()
-                ->withArgs(fn (int $chatId, string $text) => $chatId === 930 && str_contains($text, 'Гарантія 2 роки'));
-        });
+        $telegram = new FakeTelegramClient;
+        $this->app->instance(TelegramClient::class, $telegram);
 
         $this->postTelegramUpdate($this->telegramMessage(930, 930, 'Яка гарантія?'))->assertOk();
+
+        // Відповідь замінює заглушку "думаю…" в тому ж чаті
+        $this->assertSame(930, last($telegram->calls)['chat_id']);
+        $this->assertSame('Гарантія 2 роки.', last($telegram->texts()));
 
         $this->assertDatabaseHas('users', ['id' => $user->id, 'conversation_session_id' => $session->id]);
     }
@@ -49,12 +51,12 @@ class FreeChatTest extends TestCase
             $mock->shouldReceive('ask')->once()->andThrow(new RagAnswerGenerationException('LLM down'));
         });
 
-        $this->mock(TelegramClient::class, function ($mock) {
-            $mock->shouldReceive('sendMessage')
-                ->once()
-                ->withArgs(fn (int $chatId, string $text) => $chatId === 931 && str_contains($text, 'помилка'));
-        });
+        $telegram = new FakeTelegramClient;
+        $this->app->instance(TelegramClient::class, $telegram);
 
         $this->postTelegramUpdate($this->telegramMessage(931, 931, 'Привіт, як справи?'))->assertOk();
+
+        $this->assertSame(931, last($telegram->calls)['chat_id']);
+        $this->assertStringContainsString('помилка', last($telegram->texts()));
     }
 }

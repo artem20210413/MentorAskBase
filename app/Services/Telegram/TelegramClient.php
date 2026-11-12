@@ -16,7 +16,7 @@ class TelegramClient
      * (4096 рахується в UTF-16, де емодзі важать 2) — довгий текст (напр.
      * RAG-відповідь) ріжемо на кілька повідомлень.
      */
-    private const MESSAGE_LIMIT = 4000;
+    public const MESSAGE_LIMIT = 4000;
 
     private Api $api;
 
@@ -60,6 +60,26 @@ class TelegramClient
             'chat_id' => $chatId,
             'message_id' => $messageId,
         ], $replyMarkup));
+    }
+
+    public function deleteMessage(int|string $chatId, int $messageId): bool
+    {
+        return $this->api->deleteMessage([
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+        ]);
+    }
+
+    /**
+     * Статус "друкує…" у шапці чату (Telegram показує його ~5 секунд або до
+     * наступного повідомлення бота).
+     */
+    public function sendChatAction(int|string $chatId, string $action = 'typing'): bool
+    {
+        return $this->api->sendChatAction([
+            'chat_id' => $chatId,
+            'action' => $action,
+        ]);
     }
 
     public function answerCallbackQuery(string $callbackQueryId, ?string $text = null): bool

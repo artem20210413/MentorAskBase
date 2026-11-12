@@ -17,10 +17,23 @@ class OnboardingService
         private ReapplicationCooldownService $cooldown,
     ) {}
 
-    public function sendGreeting(int $chatId): void
+    /** FR-002: мова, якщо мова Telegram-клієнта не підтримується ботом. */
+    public const DEFAULT_LOCALE = 'uk';
+
+    /**
+     * FR-002: до реєстрації мова ще не вибрана — беремо мову Telegram-клієнта
+     * (from.language_code, напр. "en" або "en-GB"), якщо бот її підтримує.
+     */
+    public static function localeFor(?string $languageCode): string
     {
-        // FR-002: до реєстрації мова ще не вибрана — замовчування 'uk'.
-        $locale = 'uk';
+        $code = strtolower(substr((string) $languageCode, 0, 2));
+
+        return in_array($code, BotMenuService::LANGUAGES, true) ? $code : self::DEFAULT_LOCALE;
+    }
+
+    public function sendGreeting(int $chatId, ?string $languageCode = null): void
+    {
+        $locale = self::localeFor($languageCode);
 
         $this->telegram->sendMessage($chatId, __('telegram.greeting', [], $locale), $this->shareContactKeyboard($locale));
     }
@@ -29,9 +42,9 @@ class OnboardingService
      * Надіслано чужий контакт (або контакт без Telegram-акаунта) — просимо
      * поділитися саме своїм номером через кнопку.
      */
-    public function rejectForeignContact(int $chatId): void
+    public function rejectForeignContact(int $chatId, ?string $languageCode = null): void
     {
-        $locale = 'uk';
+        $locale = self::localeFor($languageCode);
 
         $this->telegram->sendMessage($chatId, __('telegram.contact_not_own', [], $locale), $this->shareContactKeyboard($locale));
     }
@@ -50,9 +63,9 @@ class OnboardingService
     /**
      * @return array{outcome: string, user?: User, next_allowed_at?: CarbonInterface}
      */
-    public function handleContact(int $telegramUserId, int $chatId, string $rawPhone, ?string $username): array
+    public function handleContact(int $telegramUserId, int $chatId, string $rawPhone, ?string $username, ?string $languageCode = null): array
     {
-        $locale = 'uk';
+        $locale = self::localeFor($languageCode);
         $normalized = $this->normalizePhone($rawPhone);
 
         if ($normalized === null) {
@@ -83,8 +96,8 @@ class OnboardingService
             'status' => 'pending',
             'telegram_chat_id' => $telegramUserId,
             'telegram_username' => $username,
-            // FR-002: мова за замовчуванням — uk (явно, щоб не залежати від
-            // того, чи підхопить in-memory модель DB-дефолт одразу після create()).
+            // FR-002: мова Telegram-клієнта (явно, щоб не залежати від того,
+            // чи підхопить in-memory модель DB-дефолт одразу після create()).
             'language' => $locale,
         ]);
 

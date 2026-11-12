@@ -48,7 +48,7 @@ class PublicChat extends Component
         // їх не обмежує — ліміт по IP рахуємо тут, до звернення до LLM.
         $rateLimitKey = 'public-chat:'.request()->ip();
         if (RateLimiter::tooManyAttempts($rateLimitKey, (int) config('rag.rate_limit_per_minute'))) {
-            $this->error = 'Забагато запитів. Спробуйте за хвилину.';
+            $this->error = __('chat.rate_limited');
 
             return;
         }
@@ -62,7 +62,7 @@ class PublicChat extends Component
         try {
             $log = $questionAnsweringService->ask($question, $this->sessionId);
         } catch (RagAnswerGenerationException $e) {
-            $this->error = 'Сервіс тимчасово недоступний, спробуйте ще раз.';
+            $this->error = __('chat.unavailable');
             $this->isSending = false;
 
             return;

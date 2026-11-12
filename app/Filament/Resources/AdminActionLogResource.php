@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Enums\UserRole;
+use App\Filament\Concerns\TranslatesStates;
 use App\Filament\Resources\AdminActionLogResource\Pages;
 use App\Models\AdminActionLog;
 use Filament\Forms\Form;
@@ -15,13 +16,21 @@ use Filament\Tables\Table;
  */
 class AdminActionLogResource extends Resource
 {
+    use TranslatesStates;
+
     protected static ?string $model = AdminActionLog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
-    protected static ?string $modelLabel = 'Журнал дій';
+    public static function getModelLabel(): string
+    {
+        return __('admin.action_log.model');
+    }
 
-    protected static ?string $pluralModelLabel = 'Журнал дій';
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.action_log.plural');
+    }
 
     public static function canViewAny(): bool
     {
@@ -37,19 +46,12 @@ class AdminActionLogResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('actor.name')->label('Хто'),
-                TextColumn::make('target.name')->label('Щодо кого')->placeholder('—'),
+                TextColumn::make('actor.name')->label(__('admin.action_log.actor')),
+                TextColumn::make('target.name')->label(__('admin.action_log.target'))->placeholder('—'),
                 TextColumn::make('action')
-                    ->label('Дія')
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'approval_approved' => 'Схвалено заявку',
-                        'approval_rejected' => 'Відхилено заявку',
-                        'role_changed' => 'Змінено роль',
-                        'user_deactivated' => 'Деактивовано',
-                        'user_activated' => 'Активовано',
-                        default => $state,
-                    }),
-                TextColumn::make('created_at')->label('Коли')->dateTime('d.m.Y H:i'),
+                    ->label(__('admin.action_log.action'))
+                    ->formatStateUsing(fn (string $state): string => self::translateOrRaw("admin.action_log.actions.{$state}", $state)),
+                TextColumn::make('created_at')->label(__('admin.action_log.created_at'))->dateTime('d.m.Y H:i'),
             ])
             ->defaultSort('created_at', 'desc');
     }

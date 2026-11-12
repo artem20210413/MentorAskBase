@@ -28,7 +28,9 @@ class ProcessTelegramUpdateJob implements ShouldQueue
     public int $tries = 1;
 
     /** Агентний цикл (до rag.agent.max_tool_steps кроків + web_search). */
-    public int $timeout = 180;
+    public const TIMEOUT_SECONDS = 180;
+
+    public int $timeout = self::TIMEOUT_SECONDS;
 
     public function __construct(public readonly array $payload)
     {

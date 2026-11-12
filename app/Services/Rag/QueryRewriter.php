@@ -28,7 +28,7 @@ class QueryRewriter
         $messages = [
             [
                 'role' => 'system',
-                'content' => __('bot.query_rewrite_instruction'),
+                'content' => __('bot.query_rewrite_instruction', [], 'en'),
             ],
             ...$history,
             ['role' => 'user', 'content' => $question],

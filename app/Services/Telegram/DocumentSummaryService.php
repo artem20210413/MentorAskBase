@@ -48,18 +48,14 @@ class DocumentSummaryService
 
     private function generate(string $text, string $locale): string
     {
-        $localeName = match ($locale) {
-            'ru' => 'російською мовою',
-            'en' => 'English',
-            default => 'українською мовою',
-        };
-
         $response = OpenAI::chat()->create([
             'model' => config('rag.openai.chat_model'),
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => "Стисло (3-5 речень) підсумуй зміст наведеного документа {$localeName}.",
+                    // Промпти для LLM — англійською (як і bot.php); мова
+                    // відповіді задається кодом, тож працює для будь-якої мови бота.
+                    'content' => __('bot.document_summary_instruction', ['locale' => $locale], 'en'),
                 ],
                 ['role' => 'user', 'content' => $text],
             ],
