@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 
 use App\Models\Document;
 use App\Models\User;
+use App\Services\Rag\QuestionAnsweringService;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -22,6 +23,7 @@ class BotMenuService
     public function __construct(
         private TelegramClient $telegram,
         private DocumentSummaryService $summaries,
+        private QuestionAnsweringService $questionAnswering,
     ) {}
 
     public function sendMainMenu(int $chatId, string $locale): void
@@ -158,6 +160,30 @@ class BotMenuService
             (int) $user->telegram_chat_id,
             $summary ?? __('telegram.doc_summary_unavailable', [], $user->language),
         );
+
+        if ($summary !== null) {
+            $this->rememberInConversation($user, $document, $summary);
+        }
+    }
+
+    /**
+     * Резюме стає частиною розмови: уточнення на кшталт «а що там описано?»
+     * у вільному чаті розуміються в контексті цього документа, а пошук у базі
+     * знань переформульовується з урахуванням його назви.
+     */
+    private function rememberInConversation(User $user, Document $document, string $summary): void
+    {
+        $log = $this->questionAnswering->recordExchange(
+            __('telegram.doc_summary_question', ['name' => $document->original_name], $user->language),
+            $summary,
+            $user->language,
+            $user->conversation_session_id,
+            $document,
+        );
+
+        if ($user->conversation_session_id !== $log->conversation_session_id) {
+            $user->update(['conversation_session_id' => $log->conversation_session_id]);
+        }
     }
 
     private function btnLanguage(string $locale): string

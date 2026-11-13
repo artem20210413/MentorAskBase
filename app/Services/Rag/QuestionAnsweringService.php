@@ -57,6 +57,31 @@ class QuestionAnsweringService
     }
 
     /**
+     * Записує в сесію обмін, сформований поза агентним циклом (напр. AI-резюме
+     * документа в меню бота), щоб наступні питання розмови бачили його в
+     * історії (FR-011) — і LLM, і переформулювання запиту для пошуку.
+     */
+    public function recordExchange(string $question, string $answer, string $language, ?string $sessionId = null, ?Document $document = null): QueryLog
+    {
+        $session = $this->sessionService->resolve($sessionId);
+
+        $log = QueryLog::create([
+            'conversation_session_id' => $session->id,
+            'question' => $question,
+            'answer' => $answer,
+            'detected_language' => $language,
+            'answered_in_language' => $language,
+            'source_document_ids' => $document
+                ? [['type' => 'document', 'document_id' => $document->id, 'page_number' => null, 'relevance' => null]]
+                : [],
+        ]);
+
+        $session->update(['last_activity_at' => now()]);
+
+        return $log;
+    }
+
+    /**
      * Джерела відповіді — документи бази знань і/або результати
      * інтернет-пошуку (FR-003, FR-009d).
      *

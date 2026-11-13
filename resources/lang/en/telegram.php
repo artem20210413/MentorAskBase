@@ -20,6 +20,8 @@ return [
     'docs_nav_next' => 'Next ▶️',
     'doc_not_found' => 'No document found with that number.',
     'doc_summary_unavailable' => 'Could not get a summary of this document.',
+    // Питання, яким показ резюме записується в історію розмови (контекст для вільного чату)
+    'doc_summary_question' => 'Tell me about the document “:name”',
     'doc_info_prompt' => 'Send the document number from the list.',
 
     'invalid_phone' => 'Could not recognize the phone number. Please try again.',
