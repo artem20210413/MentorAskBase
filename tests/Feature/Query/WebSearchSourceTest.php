@@ -88,7 +88,9 @@ class WebSearchSourceTest extends TestCase
      */
     public function test_system_instructions_stay_english_regardless_of_question_language(): void
     {
-        $this->assertSame('en', config('app.locale'));
+        // Промпти для LLM — завжди англійською, незалежно від мови
+        // інтерфейсу (APP_LOCALE) та мови питання.
+        app()->setLocale('uk');
 
         $this->authenticateApiClient();
 

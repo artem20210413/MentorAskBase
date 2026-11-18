@@ -1,0 +1,77 @@
+<?php
+
+// Адмін-панель Filament (вхід, документи, користувачі, журнал дій). Мова — APP_LOCALE.
+
+return [
+    'login' => [
+        'title' => 'Sign in',
+        'heading' => 'Sign in with your phone number',
+        'phone' => 'Phone number',
+        'code' => 'Code from Telegram',
+        'request_code' => 'Get code',
+        'submit' => 'Sign in',
+        'too_many_attempts' => 'Too many attempts. Please try again in a minute.',
+        'no_access' => 'Access denied.',
+        'invalid_code' => 'Invalid or expired code.',
+    ],
+    'documents' => [
+        'model' => 'Document',
+        'plural' => 'Documents',
+        'name' => 'Name',
+        'status' => 'Status',
+        'statuses' => [
+            'pending' => 'Pending',
+            'processing' => 'Processing',
+            'processed' => 'Processed',
+            'failed' => 'Failed',
+            'duplicate' => 'Duplicate',
+        ],
+        'failure_reason' => 'Failure reason',
+        'uploaded_at' => 'Uploaded at',
+        'delete' => 'Delete',
+        'upload' => 'Upload documents',
+        'files' => 'Files (PDF, DOCX, TXT)',
+        'upload_success' => 'Documents uploaded: :count. Processing continues in the background.',
+        'upload_failed' => 'Some files were not uploaded',
+        'upload_failed_item' => '":name": :error',
+    ],
+    'users' => [
+        'model' => 'User',
+        'plural' => 'Users',
+        'phone' => 'Phone',
+        'name' => 'Name (from Telegram)',
+        'role' => 'Role',
+        'status' => 'Status',
+        'statuses' => [
+            'pending' => 'Pending',
+            'approved' => 'Active',
+            'rejected' => 'Rejected',
+            'deactivated' => 'Deactivated',
+        ],
+        'change_role' => 'Change role',
+        'new_role' => 'New role',
+        'activate' => 'Activate',
+        'deactivate' => 'Deactivate',
+    ],
+    'roles' => [
+        'user' => 'User',
+        'moderator' => 'Moderator',
+        'admin' => 'Administrator',
+        'super_admin' => 'Super administrator',
+    ],
+    'action_log' => [
+        'model' => 'Action log',
+        'plural' => 'Action log',
+        'actor' => 'Who',
+        'target' => 'Target',
+        'action' => 'Action',
+        'created_at' => 'When',
+        'actions' => [
+            'approval_approved' => 'Application approved',
+            'approval_rejected' => 'Application rejected',
+            'role_changed' => 'Role changed',
+            'user_deactivated' => 'Deactivated',
+            'user_activated' => 'Activated',
+        ],
+    ],
+];

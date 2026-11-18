@@ -65,7 +65,7 @@ class ProcessDocumentJob implements ShouldQueue
             };
 
             if ($chunksCreated === 0) {
-                throw new RuntimeException('З документа не вдалося вилучити придатний для пошуку текст.');
+                throw new RuntimeException(__('documents.no_searchable_text'));
             }
 
             $document->update(['status' => 'processed']);

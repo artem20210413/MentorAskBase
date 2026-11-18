@@ -36,6 +36,34 @@ return [
         'embedding_dimensions' => (int) env('OPENAI_EMBEDDING_DIMENSIONS', 1536),
     ],
 
+    // Параметри генерації для чат-/vision-/responses-викликів до OpenAI.
+    // Застосовуються до всіх текстових викликів через LlmOptions. Увага: ці
+    // ключі підтримують стандартні моделі (gpt-4o, gpt-4o-mini). Reasoning-
+    // моделі (o-серія, gpt-5) відхиляють temperature/top_p і вимагають
+    // max_completion_tokens — при переході на них цей блок треба адаптувати.
+    'llm' => [
+        // Температура семплінгу: 0 — детерміновано, ~2 — максимально "творчо".
+        // Для RAG тримаємо низькою, щоб відповіді спиралися на знайдений
+        // контекст, а не вигадувалися.
+        'temperature' => (float) env('OPENAI_TEMPERATURE', 0.2),
+
+        // Ядерний семплінг (nucleus sampling): токен обирається з найменшого
+        // набору варіантів, чия сумарна ймовірність ≥ top_p. 1.0 — без обмеження.
+        'top_p' => (float) env('OPENAI_TOP_P', 1.0),
+
+        // Максимальна кількість токенів у відповіді моделі. null (не задано) —
+        // без обмеження, щоб не обрізати довгі відповіді. Для Chat API мапиться
+        // у max_tokens, для Responses API — у max_output_tokens.
+        'max_tokens' => env('OPENAI_MAX_TOKENS') !== null
+            ? (int) env('OPENAI_MAX_TOKENS')
+            : null,
+
+        // Чи переформульовувати питання з урахуванням історії перед пошуком по
+        // базі знань (QueryRewriter). false — шукати за оригінальним питанням,
+        // без додаткового виклику LLM.
+        'query_refinement_enabled' => (bool) env('OPENAI_QUERY_REFINEMENT_ENABLED', true),
+    ],
+
     'chunking' => [
         // FR-004: максимальна довжина (у символах) одного фрагмента тексту для ембедингу
         'max_length' => (int) env('RAG_CHUNK_MAX_LENGTH', 1500),

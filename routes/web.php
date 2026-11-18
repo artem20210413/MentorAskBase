@@ -13,3 +13,4 @@ Route::get('/', function () {
 Route::get('/chat', PublicChat::class)
     ->middleware('throttle:'.config('rag.rate_limit_per_minute').',1')
     ->name('chat');
+

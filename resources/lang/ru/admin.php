@@ -1,0 +1,77 @@
+<?php
+
+// Адмін-панель Filament (вхід, документи, користувачі, журнал дій). Мова — APP_LOCALE.
+
+return [
+    'login' => [
+        'title' => 'Вход',
+        'heading' => 'Вход по номеру телефона',
+        'phone' => 'Номер телефона',
+        'code' => 'Код из Telegram',
+        'request_code' => 'Получить код',
+        'submit' => 'Войти',
+        'too_many_attempts' => 'Слишком много попыток. Попробуйте через минуту.',
+        'no_access' => 'Нет доступа.',
+        'invalid_code' => 'Неверный или устаревший код.',
+    ],
+    'documents' => [
+        'model' => 'Документ',
+        'plural' => 'Документы',
+        'name' => 'Название',
+        'status' => 'Статус',
+        'statuses' => [
+            'pending' => 'Ожидает обработки',
+            'processing' => 'Обрабатывается',
+            'processed' => 'Обработан',
+            'failed' => 'Ошибка обработки',
+            'duplicate' => 'Дубликат',
+        ],
+        'failure_reason' => 'Причина ошибки',
+        'uploaded_at' => 'Дата загрузки',
+        'delete' => 'Удалить',
+        'upload' => 'Загрузить документы',
+        'files' => 'Файлы (PDF, DOCX, TXT)',
+        'upload_success' => 'Загружено документов: :count. Обработка идёт в фоне.',
+        'upload_failed' => 'Некоторые файлы не загружены',
+        'upload_failed_item' => '«:name»: :error',
+    ],
+    'users' => [
+        'model' => 'Пользователь',
+        'plural' => 'Пользователи',
+        'phone' => 'Телефон',
+        'name' => 'Имя (из Telegram)',
+        'role' => 'Роль',
+        'status' => 'Статус',
+        'statuses' => [
+            'pending' => 'На рассмотрении',
+            'approved' => 'Активен',
+            'rejected' => 'Отклонён',
+            'deactivated' => 'Деактивирован',
+        ],
+        'change_role' => 'Изменить роль',
+        'new_role' => 'Новая роль',
+        'activate' => 'Активировать',
+        'deactivate' => 'Деактивировать',
+    ],
+    'roles' => [
+        'user' => 'Пользователь',
+        'moderator' => 'Модератор',
+        'admin' => 'Администратор',
+        'super_admin' => 'Суперадминистратор',
+    ],
+    'action_log' => [
+        'model' => 'Журнал действий',
+        'plural' => 'Журнал действий',
+        'actor' => 'Кто',
+        'target' => 'В отношении кого',
+        'action' => 'Действие',
+        'created_at' => 'Когда',
+        'actions' => [
+            'approval_approved' => 'Заявка одобрена',
+            'approval_rejected' => 'Заявка отклонена',
+            'role_changed' => 'Изменена роль',
+            'user_deactivated' => 'Деактивирован',
+            'user_activated' => 'Активирован',
+        ],
+    ],
+];

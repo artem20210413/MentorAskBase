@@ -39,7 +39,7 @@ class PdfTextExtractor
         try {
             (new Parser)->parseFile($absolutePath);
         } catch (Throwable $e) {
-            throw new \RuntimeException('Файл пошкоджений або має непідтримуваний формат: '.$e->getMessage(), previous: $e);
+            throw new \RuntimeException(__('documents.pdf_corrupted', ['error' => $e->getMessage()]), previous: $e);
         }
     }
 }

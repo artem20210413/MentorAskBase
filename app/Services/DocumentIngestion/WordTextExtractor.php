@@ -49,7 +49,7 @@ class WordTextExtractor
         try {
             IOFactory::load($absolutePath, 'Word2007');
         } catch (Throwable $e) {
-            throw new RuntimeException('Файл пошкоджений, захищений паролем або має непідтримуваний формат: '.$e->getMessage(), previous: $e);
+            throw new RuntimeException(__('documents.word_corrupted', ['error' => $e->getMessage()]), previous: $e);
         }
     }
 

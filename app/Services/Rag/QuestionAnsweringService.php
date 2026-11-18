@@ -21,15 +21,17 @@ class QuestionAnsweringService
     ) {}
 
     /**
+     * @param  (callable(string): void)|null  $onProgress  етапи агентного циклу (AgentToolRunner::STAGE_*) — для індикатора прогресу в каналі
+     *
      * @throws RagAnswerGenerationException якщо LLM недоступна після повторної спроби (FR-009c)
      */
-    public function ask(string $question, ?string $sessionId = null): QueryLog
+    public function ask(string $question, ?string $sessionId = null, ?callable $onProgress = null): QueryLog
     {
         // FR-011a: невідома/прострочена сесія — автоматично нова, без помилки
         $session = $this->sessionService->resolve($sessionId);
         $history = $this->sessionService->historyFor($session);
 
-        $result = $this->answerGenerationService->answer($question, $history);
+        $result = $this->answerGenerationService->answer($question, $history, $onProgress);
 
         $log = QueryLog::create([
             'conversation_session_id' => $session->id,
@@ -48,6 +50,31 @@ class QuestionAnsweringService
         if ($result['tool_steps'] !== []) {
             $log->toolSteps()->createMany($result['tool_steps']);
         }
+
+        $session->update(['last_activity_at' => now()]);
+
+        return $log;
+    }
+
+    /**
+     * Записує в сесію обмін, сформований поза агентним циклом (напр. AI-резюме
+     * документа в меню бота), щоб наступні питання розмови бачили його в
+     * історії (FR-011) — і LLM, і переформулювання запиту для пошуку.
+     */
+    public function recordExchange(string $question, string $answer, string $language, ?string $sessionId = null, ?Document $document = null): QueryLog
+    {
+        $session = $this->sessionService->resolve($sessionId);
+
+        $log = QueryLog::create([
+            'conversation_session_id' => $session->id,
+            'question' => $question,
+            'answer' => $answer,
+            'detected_language' => $language,
+            'answered_in_language' => $language,
+            'source_document_ids' => $document
+                ? [['type' => 'document', 'document_id' => $document->id, 'page_number' => null, 'relevance' => null]]
+                : [],
+        ]);
 
         $session->update(['last_activity_at' => now()]);
 

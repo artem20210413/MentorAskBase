@@ -30,7 +30,27 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'phone' => '+1'.fake()->unique()->numerify('##########'),
+            'status' => 'approved',
+            'telegram_chat_id' => fake()->unique()->numberBetween(100000, 999999999),
+            'telegram_username' => fake()->unique()->userName(),
+            'language' => 'uk',
         ];
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'pending']);
+    }
+
+    public function rejected(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'rejected']);
+    }
+
+    public function deactivated(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'deactivated']);
     }
 
     /**

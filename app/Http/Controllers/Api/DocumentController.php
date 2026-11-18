@@ -29,7 +29,7 @@ class DocumentController extends Controller
         } catch (RuntimeException $e) {
             // FR-001b: файл пошкоджений або має непідтримуваний формат
             return response()->json([
-                'message' => 'Файл не пройшов валідацію.',
+                'message' => __('api.file_validation_failed'),
                 'errors' => ['file' => [$e->getMessage()]],
             ], 422);
         }
@@ -44,7 +44,7 @@ class DocumentController extends Controller
         $document = Document::find($id);
 
         if (! $document) {
-            return response()->json(['message' => 'Документ не знайдено.'], 404);
+            return response()->json(['message' => __('api.document_not_found')], 404);
         }
 
         return response()->json($this->transform($document));
@@ -55,7 +55,7 @@ class DocumentController extends Controller
         $document = Document::find($id);
 
         if (! $document) {
-            return response()->json(['message' => 'Документ не знайдено.'], 404);
+            return response()->json(['message' => __('api.document_not_found')], 404);
         }
 
         // FR-017/FR-017a: м'яке видалення, негайно, незалежно від активних запитів
